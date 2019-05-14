@@ -1,0 +1,2 @@
+# Hermes-NoC
+This repository proposes a network adapter to Hermes-NoC. The network adapter enables "Whishbone" peripherals to be connected to the network. In order to translate the internal communication protocol of the network (credit-based rx/tx) to wishbone and vise-versa the adapter must be placed between a external peripheral and a border-node of the network, interposing all the communication between them.
