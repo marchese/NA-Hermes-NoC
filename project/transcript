@@ -1,0 +1,592 @@
+# //  Questa Sim-64
+# //  Version 10.6e linux_x86_64 Jun 22 2018
+# //
+# //  Copyright 1991-2018 Mentor Graphics Corporation
+# //  All Rights Reserved.
+# //
+# //  QuestaSim and its associated documentation contain trade
+# //  secrets and commercial or financial information that are the property of
+# //  Mentor Graphics Corporation and are privileged, confidential,
+# //  and exempt from disclosure under the Freedom of Information Act,
+# //  5 U.S.C. Section 552. Furthermore, this information
+# //  is prohibited from disclosure under the Trade Secrets Act,
+# //  18 U.S.C. Section 1905.
+# //
+# do simulate.do
+# QuestaSim-64 vmap 10.6e Lib Mapping Utility 2018.06 Jun 22 2018
+# vmap work work 
+# Modifying modelsim.ini
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:22 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/Hermes_package.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Compiling package HermesPackage
+# -- Compiling package body HermesPackage
+# -- Loading package HermesPackage
+# End time: 23:06:22 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:22 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/Hermes_buffer.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity Hermes_buffer
+# -- Compiling architecture Hermes_buffer of Hermes_buffer
+# End time: 23:06:22 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:22 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/Hermes_switchcontrol.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity SwitchControl
+# -- Compiling architecture AlgorithmXY of SwitchControl
+# -- Compiling architecture AlgorithmWFM of SwitchControl
+# -- Loading entity SwitchControl
+# -- Compiling architecture AlgorithmNLM of SwitchControl
+# -- Loading entity SwitchControl
+# -- Compiling architecture AlgorithmNFM of SwitchControl
+# -- Loading entity SwitchControl
+# -- Compiling architecture AlgorithmWFNM of SwitchControl
+# -- Loading entity SwitchControl
+# -- Compiling architecture AlgorithmNLNM of SwitchControl
+# -- Loading entity SwitchControl
+# -- Compiling architecture AlgorithmNFNM of SwitchControl
+# -- Loading entity SwitchControl
+# End time: 23:06:22 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:22 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/Hermes_crossbar_BL.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity Hermes_crossbar_BL
+# -- Compiling architecture AlgorithmXY of Hermes_crossbar_BL
+# -- Compiling architecture AlgorithmWFNM of Hermes_crossbar_BL
+# -- Loading entity Hermes_crossbar_BL
+# -- Compiling architecture AlgorithmNLNM of Hermes_crossbar_BL
+# -- Loading entity Hermes_crossbar_BL
+# -- Compiling architecture AlgorithmNFNM of Hermes_crossbar_BL
+# -- Loading entity Hermes_crossbar_BL
+# -- Compiling architecture AlgorithmWFM of Hermes_crossbar_BL
+# -- Loading entity Hermes_crossbar_BL
+# -- Compiling architecture AlgorithmNLM of Hermes_crossbar_BL
+# -- Loading entity Hermes_crossbar_BL
+# -- Compiling architecture AlgorithmNFM of Hermes_crossbar_BL
+# -- Loading entity Hermes_crossbar_BL
+# End time: 23:06:22 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:22 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/Hermes_crossbar_BC.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity Hermes_crossbar_BC
+# -- Compiling architecture AlgorithmXY of Hermes_crossbar_BC
+# -- Compiling architecture AlgorithmWFNM of Hermes_crossbar_BC
+# -- Loading entity Hermes_crossbar_BC
+# -- Compiling architecture AlgorithmNLNM of Hermes_crossbar_BC
+# -- Loading entity Hermes_crossbar_BC
+# -- Compiling architecture AlgorithmNFNM of Hermes_crossbar_BC
+# -- Loading entity Hermes_crossbar_BC
+# -- Compiling architecture AlgorithmWFM of Hermes_crossbar_BC
+# -- Loading entity Hermes_crossbar_BC
+# -- Compiling architecture AlgorithmNLM of Hermes_crossbar_BC
+# -- Loading entity Hermes_crossbar_BC
+# -- Compiling architecture AlgorithmNFM of Hermes_crossbar_BC
+# -- Loading entity Hermes_crossbar_BC
+# End time: 23:06:22 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:22 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/Hermes_crossbar_BR.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity Hermes_crossbar_BR
+# -- Compiling architecture AlgorithmXY of Hermes_crossbar_BR
+# -- Compiling architecture AlgorithmWFNM of Hermes_crossbar_BR
+# -- Loading entity Hermes_crossbar_BR
+# -- Compiling architecture AlgorithmNLNM of Hermes_crossbar_BR
+# -- Loading entity Hermes_crossbar_BR
+# -- Compiling architecture AlgorithmNFNM of Hermes_crossbar_BR
+# -- Loading entity Hermes_crossbar_BR
+# -- Compiling architecture AlgorithmWFM of Hermes_crossbar_BR
+# -- Loading entity Hermes_crossbar_BR
+# -- Compiling architecture AlgorithmNLM of Hermes_crossbar_BR
+# -- Loading entity Hermes_crossbar_BR
+# -- Compiling architecture AlgorithmNFM of Hermes_crossbar_BR
+# -- Loading entity Hermes_crossbar_BR
+# End time: 23:06:22 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:22 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/Hermes_crossbar_CL.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity Hermes_crossbar_CL
+# -- Compiling architecture AlgorithmXY of Hermes_crossbar_CL
+# -- Compiling architecture AlgorithmWFNM of Hermes_crossbar_CL
+# -- Loading entity Hermes_crossbar_CL
+# -- Compiling architecture AlgorithmNLNM of Hermes_crossbar_CL
+# -- Loading entity Hermes_crossbar_CL
+# -- Compiling architecture AlgorithmNFNM of Hermes_crossbar_CL
+# -- Loading entity Hermes_crossbar_CL
+# -- Compiling architecture AlgorithmWFM of Hermes_crossbar_CL
+# -- Loading entity Hermes_crossbar_CL
+# -- Compiling architecture AlgorithmNLM of Hermes_crossbar_CL
+# -- Loading entity Hermes_crossbar_CL
+# -- Compiling architecture AlgorithmNFM of Hermes_crossbar_CL
+# -- Loading entity Hermes_crossbar_CL
+# End time: 23:06:22 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:22 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/Hermes_crossbar_CC.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity Hermes_crossbar_CC
+# -- Compiling architecture AlgorithmXY of Hermes_crossbar_CC
+# -- Compiling architecture AlgorithmWFNM of Hermes_crossbar_CC
+# -- Loading entity Hermes_crossbar_CC
+# -- Compiling architecture AlgorithmNLNM of Hermes_crossbar_CC
+# -- Loading entity Hermes_crossbar_CC
+# -- Compiling architecture AlgorithmNFNM of Hermes_crossbar_CC
+# -- Loading entity Hermes_crossbar_CC
+# -- Compiling architecture AlgorithmWFM of Hermes_crossbar_CC
+# -- Loading entity Hermes_crossbar_CC
+# -- Compiling architecture AlgorithmNLM of Hermes_crossbar_CC
+# -- Loading entity Hermes_crossbar_CC
+# -- Compiling architecture AlgorithmNFM of Hermes_crossbar_CC
+# -- Loading entity Hermes_crossbar_CC
+# End time: 23:06:22 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:22 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/Hermes_crossbar_CR.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity Hermes_crossbar_CR
+# -- Compiling architecture AlgorithmXY of Hermes_crossbar_CR
+# -- Compiling architecture AlgorithmWFNM of Hermes_crossbar_CR
+# -- Loading entity Hermes_crossbar_CR
+# -- Compiling architecture AlgorithmNLNM of Hermes_crossbar_CR
+# -- Loading entity Hermes_crossbar_CR
+# -- Compiling architecture AlgorithmNFNM of Hermes_crossbar_CR
+# -- Loading entity Hermes_crossbar_CR
+# -- Compiling architecture AlgorithmWFM of Hermes_crossbar_CR
+# -- Loading entity Hermes_crossbar_CR
+# -- Compiling architecture AlgorithmNLM of Hermes_crossbar_CR
+# -- Loading entity Hermes_crossbar_CR
+# -- Compiling architecture AlgorithmNFM of Hermes_crossbar_CR
+# -- Loading entity Hermes_crossbar_CR
+# End time: 23:06:22 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:22 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/Hermes_crossbar_TL.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity Hermes_crossbar_TL
+# -- Compiling architecture AlgorithmXY of Hermes_crossbar_TL
+# -- Compiling architecture AlgorithmWFNM of Hermes_crossbar_TL
+# -- Loading entity Hermes_crossbar_TL
+# -- Compiling architecture AlgorithmNLNM of Hermes_crossbar_TL
+# -- Loading entity Hermes_crossbar_TL
+# -- Compiling architecture AlgorithmNFNM of Hermes_crossbar_TL
+# -- Loading entity Hermes_crossbar_TL
+# -- Compiling architecture AlgorithmWFM of Hermes_crossbar_TL
+# -- Loading entity Hermes_crossbar_TL
+# -- Compiling architecture AlgorithmNLM of Hermes_crossbar_TL
+# -- Loading entity Hermes_crossbar_TL
+# -- Compiling architecture AlgorithmNFM of Hermes_crossbar_TL
+# -- Loading entity Hermes_crossbar_TL
+# End time: 23:06:22 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:22 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/Hermes_crossbar_TC.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity Hermes_crossbar_TC
+# -- Compiling architecture AlgorithmXY of Hermes_crossbar_TC
+# -- Compiling architecture AlgorithmWFNM of Hermes_crossbar_TC
+# -- Loading entity Hermes_crossbar_TC
+# -- Compiling architecture AlgorithmNLNM of Hermes_crossbar_TC
+# -- Loading entity Hermes_crossbar_TC
+# -- Compiling architecture AlgorithmNFNM of Hermes_crossbar_TC
+# -- Loading entity Hermes_crossbar_TC
+# -- Compiling architecture AlgorithmWFM of Hermes_crossbar_TC
+# -- Loading entity Hermes_crossbar_TC
+# -- Compiling architecture AlgorithmNLM of Hermes_crossbar_TC
+# -- Loading entity Hermes_crossbar_TC
+# -- Compiling architecture AlgorithmNFM of Hermes_crossbar_TC
+# -- Loading entity Hermes_crossbar_TC
+# End time: 23:06:22 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:22 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/Hermes_crossbar_TR.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity Hermes_crossbar_TR
+# -- Compiling architecture AlgorithmXY of Hermes_crossbar_TR
+# -- Compiling architecture AlgorithmWFNM of Hermes_crossbar_TR
+# -- Loading entity Hermes_crossbar_TR
+# -- Compiling architecture AlgorithmNLNM of Hermes_crossbar_TR
+# -- Loading entity Hermes_crossbar_TR
+# -- Compiling architecture AlgorithmNFNM of Hermes_crossbar_TR
+# -- Loading entity Hermes_crossbar_TR
+# -- Compiling architecture AlgorithmWFM of Hermes_crossbar_TR
+# -- Loading entity Hermes_crossbar_TR
+# -- Compiling architecture AlgorithmNLM of Hermes_crossbar_TR
+# -- Loading entity Hermes_crossbar_TR
+# -- Compiling architecture AlgorithmNFM of Hermes_crossbar_TR
+# -- Loading entity Hermes_crossbar_TR
+# End time: 23:06:22 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:22 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/RouterBL.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity RouterBL
+# -- Compiling architecture RouterBL of RouterBL
+# -- Loading entity Hermes_buffer
+# -- Loading entity SwitchControl
+# -- Loading entity Hermes_crossbar_BL
+# End time: 23:06:22 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:22 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/RouterBC.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity RouterBC
+# -- Compiling architecture RouterBC of RouterBC
+# -- Loading entity Hermes_buffer
+# -- Loading entity SwitchControl
+# -- Loading entity Hermes_crossbar_BC
+# End time: 23:06:22 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:22 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/RouterBR.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity RouterBR
+# -- Compiling architecture RouterBR of RouterBR
+# -- Loading entity Hermes_buffer
+# -- Loading entity SwitchControl
+# -- Loading entity Hermes_crossbar_BR
+# End time: 23:06:22 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:22 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/RouterCL.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity RouterCL
+# -- Compiling architecture RouterCL of RouterCL
+# -- Loading entity Hermes_buffer
+# -- Loading entity SwitchControl
+# -- Loading entity Hermes_crossbar_CL
+# End time: 23:06:23 on Jul 07,2019, Elapsed time: 0:00:01
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:23 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/RouterCC.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity RouterCC
+# -- Compiling architecture RouterCC of RouterCC
+# -- Loading entity Hermes_buffer
+# -- Loading entity SwitchControl
+# -- Loading entity Hermes_crossbar_CC
+# End time: 23:06:23 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:23 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/RouterCR.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity RouterCR
+# -- Compiling architecture RouterCR of RouterCR
+# -- Loading entity Hermes_buffer
+# -- Loading entity SwitchControl
+# -- Loading entity Hermes_crossbar_CR
+# End time: 23:06:23 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:23 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/RouterTL.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity RouterTL
+# -- Compiling architecture RouterTL of RouterTL
+# -- Loading entity Hermes_buffer
+# -- Loading entity SwitchControl
+# -- Loading entity Hermes_crossbar_TL
+# End time: 23:06:23 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:23 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/RouterTC.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity RouterTC
+# -- Compiling architecture RouterTC of RouterTC
+# -- Loading entity Hermes_buffer
+# -- Loading entity SwitchControl
+# -- Loading entity Hermes_crossbar_TC
+# End time: 23:06:23 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:23 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/RouterTR.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity RouterTR
+# -- Compiling architecture RouterTR of RouterTR
+# -- Loading entity Hermes_buffer
+# -- Loading entity SwitchControl
+# -- Loading entity Hermes_crossbar_TR
+# End time: 23:06:23 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:23 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit test_wishbone_peripheral.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package NUMERIC_STD
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity test_wishbone_peripheral
+# -- Compiling architecture test of test_wishbone_peripheral
+# End time: 23:06:23 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:23 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit test_peripheral.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity test_peripheral
+# -- Compiling architecture test of test_peripheral
+# -- Loading package NUMERIC_STD
+# -- Loading entity test_wishbone_peripheral
+# End time: 23:06:23 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:23 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit NOC/NOC.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity NOC
+# -- Compiling architecture NOC of NOC
+# -- Loading entity RouterBL
+# -- Loading entity RouterBC
+# -- Loading entity RouterBR
+# -- Loading entity RouterCL
+# -- Loading entity RouterCC
+# -- Loading entity RouterCR
+# -- Loading entity RouterTL
+# -- Loading entity RouterTC
+# -- Loading entity test_peripheral
+# End time: 23:06:23 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# QuestaSim-64 vcom 10.6e Compiler 2018.06 Jun 22 2018
+# Start time: 23:06:23 on Jul 07,2019
+# vcom -reportprogress 300 -work work -93 -explicit topNoC.vhd 
+# -- Loading package STANDARD
+# -- Loading package TEXTIO
+# -- Loading package std_logic_1164
+# -- Loading package std_logic_arith
+# -- Loading package STD_LOGIC_UNSIGNED
+# -- Loading package MATH_REAL
+# -- Loading package HermesPackage
+# -- Compiling entity topNoC
+# -- Compiling architecture topNoC of topNoC
+# -- Loading entity NOC
+# End time: 23:06:23 on Jul 07,2019, Elapsed time: 0:00:00
+# Errors: 0, Warnings: 0
+# vsim -novopt -t 10ps work.topNoC 
+# Start time: 23:06:23 on Jul 07,2019
+# ** Warning: (vsim-8891) All optimizations are turned off because the -novopt switch is in effect. This will cause your simulation to run very slowly. If you are using this switch to preserve visibility for Debug or PLI features please see the User's Manual section on Preserving Object Visibility with vopt.
+# Loading std.standard
+# Refreshing /home/marchese/remote/work.topnoc(topnoc)
+# Loading std.textio(body)
+# Loading ieee.std_logic_1164(body)
+# Loading ieee.std_logic_arith(body)
+# Refreshing /home/marchese/remote/work.hermespackage(body)
+# Loading ieee.std_logic_unsigned(body)
+# Loading ieee.math_real(body)
+# Loading work.hermespackage(body)
+# Loading work.topnoc(topnoc)
+# Refreshing /home/marchese/remote/work.noc(noc)
+# Loading work.noc(noc)
+# Refreshing /home/marchese/remote/work.routerbl(routerbl)
+# Loading work.routerbl(routerbl)
+# Refreshing /home/marchese/remote/work.hermes_buffer(hermes_buffer)
+# Loading work.hermes_buffer(hermes_buffer)
+# Refreshing /home/marchese/remote/work.switchcontrol(algorithmxy)
+# Loading work.switchcontrol(algorithmxy)
+# Refreshing /home/marchese/remote/work.hermes_crossbar_bl(algorithmxy)
+# Loading work.hermes_crossbar_bl(algorithmxy)
+# Refreshing /home/marchese/remote/work.routerbc(routerbc)
+# Loading work.routerbc(routerbc)
+# Refreshing /home/marchese/remote/work.hermes_crossbar_bc(algorithmxy)
+# Loading work.hermes_crossbar_bc(algorithmxy)
+# Refreshing /home/marchese/remote/work.routerbr(routerbr)
+# Loading work.routerbr(routerbr)
+# Refreshing /home/marchese/remote/work.hermes_crossbar_br(algorithmxy)
+# Loading work.hermes_crossbar_br(algorithmxy)
+# Refreshing /home/marchese/remote/work.routercl(routercl)
+# Loading work.routercl(routercl)
+# Refreshing /home/marchese/remote/work.hermes_crossbar_cl(algorithmxy)
+# Loading work.hermes_crossbar_cl(algorithmxy)
+# Refreshing /home/marchese/remote/work.routercc(routercc)
+# Loading work.routercc(routercc)
+# Refreshing /home/marchese/remote/work.hermes_crossbar_cc(algorithmxy)
+# Loading work.hermes_crossbar_cc(algorithmxy)
+# Refreshing /home/marchese/remote/work.routercr(routercr)
+# Loading work.routercr(routercr)
+# Refreshing /home/marchese/remote/work.hermes_crossbar_cr(algorithmxy)
+# Loading work.hermes_crossbar_cr(algorithmxy)
+# Refreshing /home/marchese/remote/work.routertl(routertl)
+# Loading work.routertl(routertl)
+# Refreshing /home/marchese/remote/work.hermes_crossbar_tl(algorithmxy)
+# Loading work.hermes_crossbar_tl(algorithmxy)
+# Refreshing /home/marchese/remote/work.routertc(routertc)
+# Loading work.routertc(routertc)
+# Refreshing /home/marchese/remote/work.hermes_crossbar_tc(algorithmxy)
+# Loading work.hermes_crossbar_tc(algorithmxy)
+# Refreshing /home/marchese/remote/work.test_peripheral(test)
+# Loading ieee.numeric_std(body)
+# Loading work.test_peripheral(test)
+# Refreshing /home/marchese/remote/work.test_wishbone_peripheral(test)
+# Loading work.test_wishbone_peripheral(test)
+# 1
+# 1
+restart
+# ** Warning: (vsim-8891) All optimizations are turned off because the -novopt switch is in effect. This will cause your simulation to run very slowly. If you are using this switch to preserve visibility for Debug or PLI features please see the User's Manual section on Preserving Object Visibility with vopt.
+run 4 us
+do wave.do
+# End time: 23:32:22 on Jul 07,2019, Elapsed time: 0:25:59
+# Errors: 0, Warnings: 0
