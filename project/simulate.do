@@ -30,7 +30,8 @@ vcom -work work -93 -explicit NOC/RouterTL.vhd
 vcom -work work -93 -explicit NOC/RouterTC.vhd
 vcom -work work -93 -explicit NOC/RouterTR.vhd
 vcom -work work -93 -explicit test_wishbone_peripheral.vhd
-vcom -work work -93 -explicit test_peripheral.vhd
+vcom -work work -93 -explicit network_interface.vhd
+#vcom -work work -93 -explicit test_peripheral.vhd
 vcom -work work -93 -explicit NOC/NOC.vhd
 vcom -work work -93 -explicit topNoC.vhd
 
