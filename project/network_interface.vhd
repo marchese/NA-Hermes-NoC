@@ -89,6 +89,12 @@ signal s_rrcam_doutb  : NI_SERVICE_REQUEST;
 signal s_rrcam_enb    : std_logic;
 signal s_rrcam_wea    : std_logic;
 
+signal request_record_wp        : integer;
+signal request_record_rp        : integer;
+signal s_rrcam_has_data         : std_logic;
+signal current_request          : NI_SERVICE_REQUEST;
+signal data_ready               : std_logic;
+
 begin
 
     -- Signals to control the Wishbone peripheral
@@ -103,6 +109,7 @@ begin
     -- Signals to control de Request Record CAM
     s_rrcam_clka <= clock;
     s_rrcam_clkb <= clock;
+    s_rrcam_has_data <= '1' when request_record_wp > request_record_rp else '0';
 
     process(reset, clock)
     begin
@@ -118,24 +125,53 @@ begin
         end if;
     end process;
 
+    -- Read from requests memory
+    process(reset, clock)
+    begin
+        if reset = '1' then
+            s_rrcam_enb <= '0';
+            s_rrcam_addrb <= (others => '0');
+            current_request <= ((others => '0'), (others => '0'), (others => '0'));
+            request_record_rp <= 0;
+            data_ready <= '0';
+        elsif rising_edge(clock) then
+            if s_rrcam_has_data = '1' then
+                s_rrcam_addrb <= std_logic_vector(to_unsigned(request_record_rp, 8));
+                s_rrcam_enb <= '1';
+                data_ready <= '1';
+                request_record_rp <= request_record_rp + 1;
+            else
+                s_rrcam_enb <= '0';
+                s_rrcam_addrb <= (others => '0');
+                current_request <= ((others => '0'), (others => '0'), (others => '0'));
+            end if;
+
+            if data_ready = '1' then
+                current_request <= s_rrcam_doutb;
+                data_ready <= '0';
+            end if;
+        end if;
+    end process;
+
     -- NOC interface control states
-    interface_noc_state <= waiting when interface_noc_state = initializing and s_initialization_done = '1' else
-                                analysing when interface_noc_state = waiting and s_has_message = '1' else
-                                refusing when interface_noc_state = analysing and s_analysing_done = '1' and s_should_buffer = '0' else
-                                buffering when interface_noc_state = analysing and s_analysing_done = '1' and s_should_buffer = '1' else
-                                waiting when interface_noc_state = buffering and s_buffering_done = '1' else
-                                waiting when interface_noc_state = refusing and s_refusing_done = '1' else
+    interface_noc_state <=      initializing when reset = '1' else
+                                waiting      when interface_noc_state = initializing and s_initialization_done = '1' else
+                                analysing    when interface_noc_state = waiting and s_has_message = '1' else
+                                refusing     when interface_noc_state = analysing and s_analysing_done = '1' and s_should_buffer = '0' else
+                                buffering    when interface_noc_state = analysing and s_analysing_done = '1' and s_should_buffer = '1' else
+                                waiting      when interface_noc_state = buffering and s_buffering_done = '1' else
+                                waiting      when interface_noc_state = refusing and s_refusing_done = '1' else
                                 interface_noc_state;
 
     credit_out <= s_credit_out;
     data_out <= s_data_out;
     tx <= s_tx;
+    packet_length <= to_integer(unsigned(header_flit_2(7 downto 0)));
 
     process(reset, clock)
     begin
         if rising_edge(clock) then
             s_data_in <= data_in;
-            packet_length <= to_integer(unsigned(header_flit_2(7 downto 0)));
         end if;
     end process;
 
@@ -157,7 +193,8 @@ begin
                     header_flit_1 <= (others => '0');
                     header_flit_2 <= (others => '0');
                     header_flit_3 <= (others => '0');
-                    tmp_buffer    <= (others => '0');
+                    tmp_buffer <= (others => '0');
+                    request_record_wp <= 0;
 
                     s_initialization_done <= '1';
 
@@ -175,9 +212,7 @@ begin
                     s_should_buffer <= '0';
                     s_analysing_done <= '0';
                     s_rrcam_addra <= (others => '0');
-                    s_rrcam_addrb <= (others => '0');
                     s_rrcam_wea <= '0';
-                    s_rrcam_enb <= '0';
                     s_rrcam_dina <= ((others => '0'), (others => '0'), (others => '0'));
 
                 when analysing =>
@@ -238,9 +273,10 @@ begin
                         s_buffer_full <= '1';
 
                         -- Save record into a memory
-                        s_rrcam_addra <= (others => '0');
+                        s_rrcam_addra <= std_logic_vector(to_unsigned(request_record_wp, 8));
                         s_rrcam_wea <= '1';
                         s_rrcam_dina <= service_request_record;
+                        request_record_wp <= request_record_wp + 1;
                     end if;
 
                     buffering_data_counter <= buffering_data_counter + 1;
