@@ -79,6 +79,16 @@ signal packet_length            : integer;
 
 signal service_request_record   : NI_SERVICE_REQUEST;
 
+-- Signals to control de Request Record CAM
+signal s_rrcam_addra  : std_logic_vector(7 downto 0);
+signal s_rrcam_addrb  : std_logic_vector(7 downto 0);
+signal s_rrcam_clka   : std_logic;
+signal s_rrcam_clkb   : std_logic;
+signal s_rrcam_dina   : NI_SERVICE_REQUEST;
+signal s_rrcam_doutb  : NI_SERVICE_REQUEST;
+signal s_rrcam_enb    : std_logic;
+signal s_rrcam_wea    : std_logic;
+
 begin
 
     -- Signals to control the Wishbone peripheral
@@ -88,6 +98,11 @@ begin
     s_write_en   <= '0';
     s_stb        <= '0';
     s_cyc        <= '0';
+
+
+    -- Signals to control de Request Record CAM
+    s_rrcam_clka <= clock;
+    s_rrcam_clkb <= clock;
 
     process(reset, clock)
     begin
@@ -162,6 +177,11 @@ begin
                     buffering_header_counter <= 0;
                     s_should_buffer <= '0';
                     s_analysing_done <= '0';
+                    s_rrcam_addra <= (others => '0');
+                    s_rrcam_addrb <= (others => '0');
+                    s_rrcam_wea <= '0';
+                    s_rrcam_enb <= '0';
+                    s_rrcam_dina <= ((others => '0'), (others => '0'), (others => '0'));
 
                 when analysing =>
                     if buffering_header_counter = 0 then
@@ -219,7 +239,11 @@ begin
                     elsif buffering_data_counter = packet_length - 1 then
                         s_buffering_done <= '1';
                         s_buffer_full <= '1';
-                        --TODO: save record in a FIFO
+
+                        -- Save record into a memory
+                        s_rrcam_addra <= (others => '0');
+                        s_rrcam_wea <= '1';
+                        s_rrcam_dina <= service_request_record;
                     end if;
 
                     buffering_data_counter <= buffering_data_counter + 1;
@@ -236,5 +260,17 @@ begin
             interface_noc_state <= interface_noc_next_state;
         end if;
     end process;
+
+    request_record_cam : entity work.request_record_cam
+    port map(
+        addra   =>  s_rrcam_addra,
+        addrb   =>  s_rrcam_addrb,
+        clka    =>  s_rrcam_clka,
+        clkb    =>  s_rrcam_clkb,
+        dina    =>  s_rrcam_dina,
+        doutb   =>  s_rrcam_doutb,
+        enb     =>  s_rrcam_enb,
+        wea     =>  s_rrcam_wea
+    );
 
 end architecture;

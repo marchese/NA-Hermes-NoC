@@ -1,9 +1,9 @@
 --------------------------------------------------------------------------
 -- package com tipos basicos
 --------------------------------------------------------------------------
-library IEEE;
-use IEEE.Std_Logic_1164.all;
-use IEEE.std_logic_unsigned.all;
+library ieee;
+use ieee.Std_Logic_1164.all;
+use ieee.std_logic_unsigned.all;
 use ieee.math_real.log2;
 use ieee.math_real.ceil;
 
