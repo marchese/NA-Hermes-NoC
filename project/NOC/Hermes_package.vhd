@@ -1,9 +1,9 @@
 --------------------------------------------------------------------------
 -- package com tipos basicos
 --------------------------------------------------------------------------
-library IEEE;
-use IEEE.Std_Logic_1164.all;
-use IEEE.std_logic_unsigned.all;
+library ieee;
+use ieee.Std_Logic_1164.all;
+use ieee.std_logic_unsigned.all;
 use ieee.math_real.log2;
 use ieee.math_real.ceil;
 
@@ -102,6 +102,12 @@ package HermesPackage is
 	function CONV_STRING_8BITS( dado : std_logic_vector(7 downto 0)) return string;
 	function CONV_STRING_16BITS( dado : std_logic_vector(15 downto 0)) return string;
 	function CONV_STRING_32BITS( dado : std_logic_vector(31 downto 0)) return string;
+
+	type NI_SERVICE_REQUEST is record
+		task_id     : std_logic_vector(TAM_FLIT-1 downto 0);
+		source_pe   : std_logic_vector(TAM_FLIT-1 downto 0);
+		border_dir  : std_logic_vector(TAM_FLIT-1 downto 0);
+	end record NI_SERVICE_REQUEST; 
 
 end HermesPackage;
 
