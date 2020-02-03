@@ -37,19 +37,19 @@ architecture wishbone of network_interface is
 
 type interface_noc is (initializing, waiting, analysing, refusing, buffering);
 signal interface_noc_state      : interface_noc;
-signal interface_noc_next_state : interface_noc;
 
 signal s_credit_out : std_logic;
 signal s_data_in    : regflit;
 signal s_data_out   : regflit;
 signal s_tx         : std_logic;
 
-signal s_has_message    : std_logic;
-signal s_buffer_full    : std_logic;
-signal s_analysing_done : std_logic;
-signal s_buffering_done : std_logic;
-signal s_refusing_done  : std_logic;
-signal s_should_buffer  : std_logic;
+signal s_has_message         : std_logic;
+signal s_buffer_full         : std_logic;
+signal s_initialization_done : std_logic;
+signal s_analysing_done      : std_logic;
+signal s_buffering_done      : std_logic;
+signal s_refusing_done       : std_logic;
+signal s_should_buffer       : std_logic;
 
 -- Wishbone peripheral interface
 signal s_per_reset  : std_logic;
@@ -119,7 +119,7 @@ begin
     end process;
 
     -- NOC interface control states
-    interface_noc_next_state <= waiting when interface_noc_state = initializing else
+    interface_noc_state <= waiting when interface_noc_state = initializing and s_initialization_done = '1' else
                                 analysing when interface_noc_state = waiting and s_has_message = '1' else
                                 refusing when interface_noc_state = analysing and s_analysing_done = '1' and s_should_buffer = '0' else
                                 buffering when interface_noc_state = analysing and s_analysing_done = '1' and s_should_buffer = '1' else
@@ -159,6 +159,8 @@ begin
                     header_flit_3 <= (others => '0');
                     tmp_buffer    <= (others => '0');
 
+                    s_initialization_done <= '1';
+
                 when waiting =>
                     -- Waiting for incomming messages
                     s_credit_out <= '1';
@@ -166,11 +168,6 @@ begin
 
                     if rx = '1' then
                         s_has_message <= '1';
-                    end if;
-
-                    -- Save the first flit (service, target)
-                    if s_has_message = '1' then
-                        header_flit_1 <= s_data_in;
                     end if;
 
                     -- clear internal signals
@@ -185,21 +182,23 @@ begin
 
                 when analysing =>
                     if buffering_header_counter = 0 then
+                        -- Save the first flit (service, target)
+                        header_flit_1 <= s_data_in;
                         -- Save the second flit (packet lenght)
-                        header_flit_2 <= s_data_in;
-                        -- Save the third flit (service)
-                        header_flit_3 <= data_in;
+                        header_flit_2 <= data_in;
 
                         -- Stop receiving data
                         s_credit_out <= '0';
 
                     elsif buffering_header_counter = 1 then
-                        s_credit_out <= '1';
-                        -- TODO: Check by the service type and refuse the unknowns
+                        -- Save the third flit (service)
+                        header_flit_3 <= data_in;
 
+                        s_credit_out <= '1';
+                        -- Check if the message is a service request and the buffer is not full
                         if s_buffer_full = '1' then
                             s_should_buffer <= '0';
-                        elsif s_buffer_full = '0' and header_flit_3 = service_request then
+                        elsif s_buffer_full = '0' and data_in = service_request then
                             s_should_buffer <= '1';
                         else
                             s_should_buffer <= '0';
@@ -219,7 +218,7 @@ begin
 
                 when refusing =>
 
-                    if refusing_data_counter = packet_length - 3 then
+                    if refusing_data_counter = packet_length - 1 then
                         s_refusing_done <= '1';
                     end if;
 
@@ -229,14 +228,12 @@ begin
                 when buffering =>
 
                     s_should_buffer <= '0';
-                    if buffering_data_counter = 0 then
+                    if buffering_data_counter = 2 then
                         service_request_record.border_dir <= header_flit_1;
                         service_request_record.source_pe <= s_data_in;
+                        service_request_record.task_id <= data_in;
 
-                    elsif buffering_data_counter = 1 then
-                        service_request_record.task_id <= s_data_in;
-
-                    elsif buffering_data_counter = packet_length - 1 then
+                    elsif buffering_data_counter = 3 then
                         s_buffering_done <= '1';
                         s_buffer_full <= '1';
 
@@ -249,15 +246,6 @@ begin
                     buffering_data_counter <= buffering_data_counter + 1;
 
             end case;
-        end if;
-    end process;
-
-    process(reset, clock)
-    begin
-        if reset = '1' then
-            interface_noc_state <= initializing;
-        elsif rising_edge(clock) then
-            interface_noc_state <= interface_noc_next_state;
         end if;
     end process;
 
