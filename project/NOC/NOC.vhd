@@ -43,6 +43,16 @@ architecture NOC of NOC is
 	signal txN0002, txN0102, txN0202 : regNport;
 	signal data_outN0002, data_outN0102, data_outN0202 : arrayNport_regflit;
 	signal credit_iN0002, credit_iN0102, credit_iN0202 : regNport;
+
+	signal wb_reset    : std_logic;
+	signal wb_address  : std_logic_vector(7 downto 0);
+	signal wb_data_i   : std_logic_vector(TAM_FLIT-1 downto 0);
+	signal wb_data_o   : std_logic_vector(TAM_FLIT-1 downto 0);
+	signal wb_write_en : std_logic;
+	signal wb_stb      : std_logic;
+	signal wb_ack      : std_logic;
+	signal wb_cyc      : std_logic;
+
 begin
 
 	Router0000 : Entity work.RouterBL
@@ -172,7 +182,7 @@ begin
 		data_out => data_outN0202,
 		credit_i => credit_iN0202);
 
-	Periph : entity work.test_peripheral
+	network_interface : entity work.network_interface
 	port map (
 		clock => clock(N0202),
 		reset => reset,
@@ -181,7 +191,30 @@ begin
 		credit_in => credit_oN0202(2),
 		credit_out => credit_iN0202(2),
 		data_in => data_outN0202(2),
-		data_out => data_inN0202(2));
+		data_out => data_inN0202(2),
+
+		per_reset => wb_reset,
+		address => wb_address,
+		data_i => wb_data_i,
+		data_o => wb_data_o,
+		write_en  => wb_write_en,
+		stb => wb_stb,
+		ack => wb_ack,
+		cyc => wb_cyc
+	);
+
+   wishbone_peripheral : entity work.test_wishbone_peripheral
+   port map(
+      clock => clock(N0202),
+      reset => wb_reset,
+      adr_i => wb_address,
+      dat_i => wb_data_o,
+      dat_o => wb_data_i,
+      we_i  => wb_write_en,
+      stb_i => wb_stb,
+      ack_o => wb_ack,
+      cyc_i => wb_cyc
+   );
 
 	-- ROUTER 0000
 	-- EAST port

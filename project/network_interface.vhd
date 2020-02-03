@@ -8,7 +8,7 @@ use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 use work.HermesPackage.all;
 
-entity test_peripheral is
+entity network_interface is
     port(
         clock        : in std_logic;
         reset        : in std_logic;
@@ -19,11 +19,21 @@ entity test_peripheral is
         credit_in    : in std_logic;
         credit_out   : out std_logic;
         data_in      : in regflit;
-        data_out     : out regflit
+        data_out     : out regflit;
+
+        -- Wishbone peripheral interface
+        per_reset : out std_logic;
+        address   : out std_logic_vector(7 downto 0);
+        data_i    : in  std_logic_vector(TAM_FLIT-1 downto 0);
+        data_o    : out std_logic_vector(TAM_FLIT-1 downto 0);
+        write_en  : out std_logic;
+        stb       : out std_logic;
+        ack       : in  std_logic;
+        cyc       : out std_logic
     );
 end;
 
-architecture test of test_peripheral is
+architecture wishbone of network_interface is
 
 type interface_noc is (initializing, waiting, analysing, refusing, buffering);
 signal interface_noc_state      : interface_noc;
@@ -42,14 +52,14 @@ signal s_refusing_done  : std_logic;
 signal s_should_buffer  : std_logic;
 
 -- Wishbone peripheral interface
-signal per_reset : std_logic;
-signal adr_o     : std_logic_vector(7 downto 0);
-signal dat_i     : std_logic_vector(TAM_FLIT-1 downto 0);
-signal dat_o     : std_logic_vector(TAM_FLIT-1 downto 0);
-signal we_o      : std_logic;
-signal stb_o     : std_logic;
-signal ack_i     : std_logic;
-signal cyc_o     : std_logic;
+signal s_per_reset  : std_logic;
+signal s_address    : std_logic_vector(7 downto 0);
+signal s_data_i     : std_logic_vector(TAM_FLIT-1 downto 0);
+signal s_data_o     : std_logic_vector(TAM_FLIT-1 downto 0);
+signal s_write_en   : std_logic;
+signal s_stb        : std_logic;
+signal s_ack        : std_logic;
+signal s_cyc        : std_logic;
 
 type service_type is (request, request_ack, request_nack, read_request, read_response, write_request, write_response);
 
@@ -66,18 +76,27 @@ signal packet_length            : integer;
 
 begin
 
-    Wishbone_peripheral : entity work.test_wishbone_peripheral
-    port map(
-        clock => clock,
-        reset => per_reset,
-        adr_i => adr_o,
-        dat_i => dat_o,
-        dat_o => dat_i,
-        we_i  => we_o,
-        stb_i => stb_o,
-        ack_o => ack_i,
-        cyc_i => cyc_o
-    );
+    -- Signals to control the Wishbone peripheral
+    s_per_reset  <= '0';
+    s_address    <= (others => '0');
+    s_data_o     <= (others => '0');
+    s_write_en   <= '0';
+    s_stb        <= '0';
+    s_cyc        <= '0';
+
+    process(reset, clock)
+    begin
+        if rising_edge(clock) then
+            per_reset <= s_per_reset;
+            address <= s_address;
+            s_data_i <= data_i;
+            data_o <= s_data_o;
+            write_en <= s_write_en;
+            stb <= s_stb;
+            s_ack <= ack;
+            cyc <= s_cyc;
+        end if;
+    end process;
 
     -- NOC interface control states
     interface_noc_next_state <= waiting when interface_noc_state = initializing else

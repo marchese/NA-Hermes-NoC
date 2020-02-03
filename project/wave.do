@@ -1,5 +1,5 @@
-add wave -position end -group NI sim:/topnoc/NOC/Periph/*
-add wave -position end -group PER sim:/topnoc/NOC/Periph/Wishbone_peripheral/*
+add wave -position end -group NI sim:/topnoc/NOC/network_interface/*
+add wave -position end -group PER sim:/topnoc/NOC/wishbone_peripheral/*
 
 add wave -position end  sim:/topnoc/NOC/Router0202/FNorth/data_in
 add wave -position end  sim:/topnoc/NOC/Router0202/FNorth/rx
