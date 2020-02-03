@@ -38,10 +38,12 @@ architecture wishbone of network_interface is
 type interface_noc is (initializing, waiting, analysing, refusing, buffering);
 signal interface_noc_state      : interface_noc;
 
-signal s_credit_out : std_logic;
 signal s_data_in    : regflit;
 signal s_data_out   : regflit;
 signal s_tx         : std_logic;
+
+signal s_credit_out_analysis   : std_logic;
+signal s_credit_out_processing : std_logic;
 
 signal s_has_message         : std_logic;
 signal s_buffer_full         : std_logic;
@@ -62,9 +64,9 @@ signal s_ack        : std_logic;
 signal s_cyc        : std_logic;
 
 type service_type is (request, request_ack, request_nack, read_request, read_response, write_request, write_response);
-constant service_request : std_logic_vector(TAM_FLIT-1 downto 0)      := x"1001";
-constant service_request_ack : std_logic_vector(TAM_FLIT-1 downto 0)  := x"1002";
-constant service_request_nack : std_logic_vector(TAM_FLIT-1 downto 0) := x"1003";
+constant service_request       : std_logic_vector(TAM_FLIT-1 downto 0) := x"1001";
+constant service_request_write : std_logic_vector(TAM_FLIT-1 downto 0) := x"1002";
+constant service_request_read  : std_logic_vector(TAM_FLIT-1 downto 0) := x"1003";
 
 signal header_flit_1 : std_logic_vector(TAM_FLIT-1 downto 0);
 signal header_flit_2 : std_logic_vector(TAM_FLIT-1 downto 0);
@@ -134,6 +136,7 @@ begin
             current_request <= ((others => '0'), (others => '0'), (others => '0'));
             request_record_rp <= 0;
             data_ready <= '0';
+            s_credit_out_processing <= '1';
         elsif rising_edge(clock) then
             if s_rrcam_has_data = '1' then
                 s_rrcam_addrb <= std_logic_vector(to_unsigned(request_record_rp, 8));
@@ -163,7 +166,7 @@ begin
                                 waiting      when interface_noc_state = refusing and s_refusing_done = '1' else
                                 interface_noc_state;
 
-    credit_out <= s_credit_out;
+    credit_out <= s_credit_out_processing and s_credit_out_analysis;
     data_out <= s_data_out;
     tx <= s_tx;
     packet_length <= to_integer(unsigned(header_flit_2(7 downto 0)));
@@ -181,7 +184,7 @@ begin
         if rising_edge(clock) then
             case interface_noc_state is
                 when initializing =>
-                    s_credit_out <= '0';
+                    s_credit_out_analysis <= '0';
                     s_data_out <= (others => '0');
                     s_tx <= '0';
 
@@ -200,7 +203,7 @@ begin
 
                 when waiting =>
                     -- Waiting for incomming messages
-                    s_credit_out <= '1';
+                    s_credit_out_analysis <= '1';
                     s_tx <= '0';
 
                     if rx = '1' then
@@ -223,19 +226,32 @@ begin
                         header_flit_2 <= data_in;
 
                         -- Stop receiving data
-                        s_credit_out <= '0';
+                        s_credit_out_analysis <= '0';
 
                     elsif buffering_header_counter = 1 then
                         -- Save the third flit (service)
                         header_flit_3 <= data_in;
 
-                        s_credit_out <= '1';
-                        -- Check if the message is a service request and the buffer is not full
-                        if s_buffer_full = '1' then
-                            s_should_buffer <= '0';
-                        elsif s_buffer_full = '0' and data_in = service_request then
-                            s_should_buffer <= '1';
+                        s_credit_out_analysis <= '1';
+
+                        -- Service request
+                        if data_in = service_request then
+                            -- Refuse the request if buffer is full
+                            if s_buffer_full = '1' then
+                                s_should_buffer <= '0';
+                                -- TODO: Activate the "Processing" state machine to send a REQUEST_NACK back to the network
+                            else
+                                s_should_buffer <= '1';
+                            end if;
+
+                        elsif data_in = service_request_write then
+                            -- TODO: Activate the "Processing" state machine to process the input from the network and write to the peripheral
+
+                        elsif data_in = service_request_read then
+                            -- TODO: Activate the "Processing" state machine to read from the peripheral and send the response to the network
+                        
                         else
+                            -- Unknown services are just ignored without sending anything back to the network as response
                             s_should_buffer <= '0';
                         end if;
 
