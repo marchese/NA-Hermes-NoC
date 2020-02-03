@@ -103,6 +103,12 @@ package HermesPackage is
 	function CONV_STRING_16BITS( dado : std_logic_vector(15 downto 0)) return string;
 	function CONV_STRING_32BITS( dado : std_logic_vector(31 downto 0)) return string;
 
+	type NI_SERVICE_REQUEST is record
+		task_id     : std_logic_vector(TAM_FLIT-1 downto 0);
+		source_pe   : std_logic_vector(TAM_FLIT-1 downto 0);
+		border_dir  : std_logic_vector(TAM_FLIT-1 downto 0);
+	end record NI_SERVICE_REQUEST; 
+
 end HermesPackage;
 
 package body HermesPackage is

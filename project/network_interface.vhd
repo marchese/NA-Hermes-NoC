@@ -62,6 +62,9 @@ signal s_ack        : std_logic;
 signal s_cyc        : std_logic;
 
 type service_type is (request, request_ack, request_nack, read_request, read_response, write_request, write_response);
+constant service_request : std_logic_vector(TAM_FLIT-1 downto 0)      := x"1001";
+constant service_request_ack : std_logic_vector(TAM_FLIT-1 downto 0)  := x"1002";
+constant service_request_nack : std_logic_vector(TAM_FLIT-1 downto 0) := x"1003";
 
 signal header_flit_1 : std_logic_vector(TAM_FLIT-1 downto 0);
 signal header_flit_2 : std_logic_vector(TAM_FLIT-1 downto 0);
@@ -73,6 +76,8 @@ signal buffering_data_counter   : integer;
 signal refusing_data_counter    : integer;
 signal buffering_header_counter : integer;
 signal packet_length            : integer;
+
+signal service_request_record   : NI_SERVICE_REQUEST;
 
 begin
 
@@ -174,8 +179,10 @@ begin
 
                         if s_buffer_full = '1' then
                             s_should_buffer <= '0';
-                        else
+                        elsif s_buffer_full = '0' and header_flit_3 = service_request then
                             s_should_buffer <= '1';
+                        else
+                            s_should_buffer <= '0';
                         end if;
 
                         s_analysing_done <= '1';
@@ -201,12 +208,20 @@ begin
                 
                 when buffering =>
 
-                    if buffering_data_counter = packet_length - 3 then
+                    s_should_buffer <= '0';
+                    if buffering_data_counter = 0 then
+                        service_request_record.border_dir <= header_flit_1;
+                        service_request_record.source_pe <= s_data_in;
+
+                    elsif buffering_data_counter = 1 then
+                        service_request_record.task_id <= s_data_in;
+
+                    elsif buffering_data_counter = packet_length - 1 then
                         s_buffering_done <= '1';
                         s_buffer_full <= '1';
+                        --TODO: save record in a FIFO
                     end if;
 
-                    tmp_buffer <= s_data_in;
                     buffering_data_counter <= buffering_data_counter + 1;
 
             end case;
