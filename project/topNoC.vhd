@@ -17,11 +17,9 @@ architecture topNoC of topNoC is
 	signal address1, data1 : std_logic_vector(15 downto 0);
 	signal ce1 : std_logic;
 
-	type service_request_packet is array (0 to 4) of std_logic_vector(TAM_FLIT-1 downto 0);
-
 	constant pck1 : service_request_packet := (
-		x"C122", x"0003", x"1001", x"0000", x"000A"
-	);
+		x"C122", x"0003", service_request, x"0000", x"000A" );
+
 	-- C122 (C = peripheral communication; 1 = north port; 22 = target PE coord)
 	-- 0003 = number of flits
 	-- 1001 = request service
@@ -29,8 +27,11 @@ architecture topNoC of topNoC is
 	-- 000A = task id
 
 	constant pck2 : service_request_packet := (
-		x"C122", x"0003", x"1001", x"0000", x"000B"
-	);
+		x"C122", x"0003", service_request, x"0000", x"000B" );
+
+	constant pck3 : service_request_write_packet := (
+		x"C122", x"0008", service_request_write, x"0000", x"000A",
+		x"FF01", x"FF02", x"FF03", x"FF04", x"FF05" );
 
 begin
 	reset <= '1', '0' after 15 ns;
@@ -203,7 +204,7 @@ begin
 		wait for 500 ns; --time between packets
 		i := 0;
 
-		while i < 5 loop
+		while i < pck1'length loop
 			if credit_o(N0000)='1' then --important: flow control
 				data1 <= pck1(i); --simulate a write( pck(i), address_noc)
 				ce1  <= '1';
@@ -216,11 +217,26 @@ begin
 			end if;
 		end loop;
 
-		wait for 500 ns; --time between packets
+		wait for 500 ns;
 		i := 0;
-		while i < 5 loop
-			if credit_o(N0000)='1' then --important: flow control
-				data1 <= pck2(i); --simulate a write( pck(i), address_noc)
+		while i < pck2'length loop
+			if credit_o(N0000)='1' then
+				data1 <= pck2(i);
+				ce1  <= '1';
+				wait for 20 ns;
+				ce1  <= '0';
+				wait for 20 ns;
+				i := i + 1;
+			else
+				wait for 20 ns;
+			end if;
+		end loop;
+
+		wait for 500 ns;
+		i := 0;
+		while i < pck3'length loop
+			if credit_o(N0000)='1' then
+				data1 <= pck3(i);
 				ce1  <= '1';
 				wait for 20 ns;
 				ce1  <= '0';
