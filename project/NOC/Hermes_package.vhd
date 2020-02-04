@@ -114,6 +114,7 @@ package HermesPackage is
 	end record NI_SERVICE_REQUEST; 
 
 	type service_request_packet is array (0 to 4) of std_logic_vector(TAM_FLIT-1 downto 0);
+	type service_request_write_packet is array (0 to 9) of std_logic_vector(TAM_FLIT-1 downto 0);
 
 	constant service_request                     : std_logic_vector(TAM_FLIT-1 downto 0) := x"1010";
 	constant service_request_response_ack        : std_logic_vector(TAM_FLIT-1 downto 0) := x"1011";

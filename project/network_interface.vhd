@@ -92,7 +92,8 @@ type internal_processing is (waiting, accepting, analysing, discarding, receivin
 signal internal_processing_state : internal_processing;
 
 signal s_rrcam_has_data         : std_logic;
-signal current_request          : NI_SERVICE_REQUEST;
+signal current_request_analysis   : NI_SERVICE_REQUEST;
+signal current_request_processing : NI_SERVICE_REQUEST;
 signal data_ready               : std_logic;
 signal request_accepted         : std_logic;
 signal request_approved         : std_logic;
@@ -110,6 +111,7 @@ signal request_ack_sent         : std_logic;
 signal send_ack_request         : std_logic;
 signal send_nack_request         : std_logic;
 signal waiting_write_request    : std_logic;
+signal waiting_nack_sent        : std_logic;
 
 begin
 
@@ -144,8 +146,9 @@ begin
     -- Send responses to the network
     response_sender_state <= waiting when reset = '1' else
                              sending_request_ack when response_sender_state = waiting and internal_processing_state = accepting and send_ack_request = '1' else
-                             sending_request_nack when response_sender_state = waiting and interface_noc_state = analysing and send_nack_request = '1' else
+                             sending_request_nack when response_sender_state = waiting and interface_noc_state = refusing and send_nack_request = '1' else
                              waiting when response_sender_state = sending_request_ack and request_ack_sent = '1' else
+                             waiting when response_sender_state = sending_request_nack and request_ack_sent = '1' else
                              response_sender_state;
 
     response_sender_fsm: process(reset, clock)
@@ -166,7 +169,7 @@ begin
                     req_pckt(1) := x"0003";
                     req_pckt(2) := service_request_response_ack;
                     req_pckt(3) := x"FAFA";
-                    req_pckt(4) := current_request.task_id;
+                    req_pckt(4) := current_request_processing.task_id;
 
                     if credit_in = '1' and send_response_counter < req_pckt'length then
                         s_tx <= '1';
@@ -184,7 +187,7 @@ begin
                     req_pckt(1) := x"0003";
                     req_pckt(2) := service_request_response_nack;
                     req_pckt(3) := x"FAFA";
-                    req_pckt(4) := current_request.task_id;
+                    req_pckt(4) := current_request_analysis.task_id;
 
                     if credit_in = '1' and send_response_counter < req_pckt'length then
                         s_tx <= '1';
@@ -215,7 +218,7 @@ begin
                 when waiting =>
                     s_rrcam_enb <= '0';
                     s_rrcam_addrb <= (others => '0');
-                    current_request <= ((others => '0'), (others => '0'), (others => '0'));
+                    current_request_processing <= ((others => '0'), (others => '0'), (others => '0'));
                     request_record_rp <= 0;
                     data_ready <= '0';
                     request_accepted <= '0';
@@ -238,7 +241,7 @@ begin
 
                     if data_ready = '1' then
                         data_ready <= '0';
-                        current_request <= s_rrcam_doutb;
+                        current_request_processing <= s_rrcam_doutb;
                     end if;
 
                     if data_ready = '0' and waiting_write_request = '0' then
@@ -329,6 +332,10 @@ begin
                     s_rrcam_wea <= '0';
                     s_rrcam_dina <= ((others => '0'), (others => '0'), (others => '0'));
                     send_nack_request <= '0';
+                    waiting_nack_sent <= '0';
+                    write_request_processing <= '0';
+                    read_request_processing <= '0';
+                    current_request_analysis.task_id <= (others => '0');
 
                 when analysing =>
                     if buffering_header_counter = 0 then
@@ -351,13 +358,10 @@ begin
                             -- Refuse the request if buffer is full
                             if s_buffer_full = '1' then
                                 s_should_buffer <= '0';
-                                -- Activate the "Processing" state machine to send a REQUEST_NACK back to the network
-                                send_nack_request <= '1';
-                                s_analysing_done <= '1';
                             else
                                 s_should_buffer <= '1';
-                                s_analysing_done <= '1';
                             end if;
+                            s_analysing_done <= '1';
 
                         elsif data_in = service_request_write then
                             -- TODO: Activate the "Processing" state machine to process the input from the network and write to the peripheral
@@ -391,12 +395,27 @@ begin
 
                 when refusing =>
 
-                    if refusing_data_counter = packet_length - 1 then
-                        s_refusing_done <= '1';
+                    refusing_data_counter <= refusing_data_counter + 1;
+
+                    if header_flit_3 = service_request then
+                        if refusing_data_counter = 2 then
+                            -- Activate the "Processing" state machine to send a REQUEST_NACK back to the network
+                            send_nack_request <= '1';
+                            current_request_analysis.task_id <= data_in;
+                            waiting_nack_sent <= '1';
+                        end if;
+                    else
+                        if refusing_data_counter = packet_length - 1 then
+                            s_refusing_done <= '1';
+                        end if;
                     end if;
 
-                    tmp_buffer <= s_data_in;
-                    refusing_data_counter <= refusing_data_counter + 1;
+                    if waiting_nack_sent = '1' then
+                        send_nack_request <= '0';
+                        if request_ack_sent = '1' then
+                            s_refusing_done <= '1';
+                        end if;
+                    end if;
                 
                 when buffering =>
 
