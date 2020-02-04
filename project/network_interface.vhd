@@ -86,7 +86,7 @@ signal s_rrcam_enb    : std_logic;
 signal s_rrcam_wea    : std_logic;
 
 signal request_record_wp        : integer;
-signal request_record_rp        : integer;
+signal request_record_rp        : integer := 0;
 
 type internal_processing is (waiting, accepting, analysing, discarding, receiving, responding, working, terminating);
 signal internal_processing_state : internal_processing;
@@ -109,9 +109,11 @@ type response_sender is (waiting, sending_request_ack, sending_request_nack);
 signal response_sender_state    : response_sender;
 signal request_ack_sent         : std_logic;
 signal send_ack_request         : std_logic;
-signal send_nack_request         : std_logic;
+signal send_nack_request        : std_logic;
 signal waiting_write_request    : std_logic;
 signal waiting_nack_sent        : std_logic;
+signal discard_done             : std_logic;
+signal discarding_counter       : integer;
 
 begin
 
@@ -208,6 +210,7 @@ begin
                                  analysing when internal_processing_state = accepting and request_accepted = '1' else
                                  discarding when internal_processing_state = analysing and request_approved = '0' and analysing_done = '1' else
                                  receiving when internal_processing_state = analysing and request_approved = '1' and analysing_done = '1' else
+                                 waiting when internal_processing_state = discarding and discard_done = '1' else
                                  internal_processing_state;
 
     internal_processing_FSM: process(reset, clock)
@@ -219,7 +222,6 @@ begin
                     s_rrcam_enb <= '0';
                     s_rrcam_addrb <= (others => '0');
                     current_request_processing <= ((others => '0'), (others => '0'), (others => '0'));
-                    request_record_rp <= 0;
                     data_ready <= '0';
                     request_accepted <= '0';
                     request_approved <= '0';
@@ -228,6 +230,8 @@ begin
                     nack_sent <= '0';
                     send_ack_request <= '0';
                     waiting_write_request <= '0';
+                    discard_done <= '0';
+                    discarding_counter <= 0;
 
                     -- read the request from memory
                     if s_rrcam_has_data = '1'then
@@ -260,10 +264,16 @@ begin
                 when analysing =>
                     -- TODO: Security check using criptography keys in the future
                     analysing_done <= '1';
-                    request_approved <= '0';
+                    request_approved <= '0'; -- TODO: change to approved since we have no security check implemented yet
 
                 when discarding =>
-                    -- TODO: discard the data since the request is already accepted but it didn't pass in some security check
+                    -- discard the data since the request is already accepted but it didn't pass in some security check
+                    if discarding_counter = packet_length - 3 then
+                        discard_done <= '1';
+                        write_request_done <= '1';
+                    end if;
+
+                    discarding_counter <= discarding_counter + 1;
 
                 when receiving =>
                 when responding =>
@@ -346,6 +356,7 @@ begin
 
                         -- Stop receiving data
                         s_credit_out_analysis <= '0';
+                        buffering_header_counter <= buffering_header_counter + 1;
 
                     elsif buffering_header_counter = 1 then
                         -- Save the third flit (service)
@@ -383,8 +394,6 @@ begin
                             s_analysing_done <= '1';
                         end if;
                     end if;
-
-                    buffering_header_counter <= buffering_header_counter + 1;
 
                     -- clear internal signals
                     s_has_message <= '0';
