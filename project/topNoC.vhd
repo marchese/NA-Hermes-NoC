@@ -17,10 +17,8 @@ architecture topNoC of topNoC is
 	signal address1, data1 : std_logic_vector(15 downto 0);
 	signal ce1 : std_logic;
 
-	type service_request_packet is array (0 to 4) of std_logic_vector(TAM_FLIT-1 downto 0);
-
 	constant pck1 : service_request_packet := (
-		x"C122", x"0003", x"1001", x"0000", x"000A"
+		x"C122", x"0003", service_request, x"0000", x"000A"
 	);
 	-- C122 (C = peripheral communication; 1 = north port; 22 = target PE coord)
 	-- 0003 = number of flits

@@ -63,11 +63,6 @@ signal s_stb        : std_logic;
 signal s_ack        : std_logic;
 signal s_cyc        : std_logic;
 
-type service_type is (request, request_ack, request_nack, read_request, read_response, write_request, write_response);
-constant service_request       : std_logic_vector(TAM_FLIT-1 downto 0) := x"1001";
-constant service_request_write : std_logic_vector(TAM_FLIT-1 downto 0) := x"1002";
-constant service_request_read  : std_logic_vector(TAM_FLIT-1 downto 0) := x"1003";
-
 signal header_flit_1 : std_logic_vector(TAM_FLIT-1 downto 0);
 signal header_flit_2 : std_logic_vector(TAM_FLIT-1 downto 0);
 signal header_flit_3 : std_logic_vector(TAM_FLIT-1 downto 0);
@@ -93,9 +88,17 @@ signal s_rrcam_wea    : std_logic;
 
 signal request_record_wp        : integer;
 signal request_record_rp        : integer;
+
+type internal_processing is (waiting, accepting, analysing, discarding, receiving, responding, working, terminating);
+signal internal_processing_state : internal_processing;
+
 signal s_rrcam_has_data         : std_logic;
 signal current_request          : NI_SERVICE_REQUEST;
 signal data_ready               : std_logic;
+signal request_accepted         : std_logic;
+signal request_approved         : std_logic;
+signal analysing_done           : std_logic;
+signal send_response_counter    : integer;
 
 begin
 
@@ -128,33 +131,79 @@ begin
     end process;
 
     -- Read from requests memory
-    process(reset, clock)
-    begin
-        if reset = '1' then
-            s_rrcam_enb <= '0';
-            s_rrcam_addrb <= (others => '0');
-            current_request <= ((others => '0'), (others => '0'), (others => '0'));
-            request_record_rp <= 0;
-            data_ready <= '0';
-            s_credit_out_processing <= '1';
-        elsif rising_edge(clock) then
-            if s_rrcam_has_data = '1' then
-                s_rrcam_addrb <= std_logic_vector(to_unsigned(request_record_rp, 8));
-                s_rrcam_enb <= '1';
-                data_ready <= '1';
-                request_record_rp <= request_record_rp + 1;
-            else
-                s_rrcam_enb <= '0';
-                s_rrcam_addrb <= (others => '0');
-                current_request <= ((others => '0'), (others => '0'), (others => '0'));
-            end if;
+    internal_processing_state <= waiting when reset = '1' else
+                                 accepting when internal_processing_state = waiting and data_ready = '1' else
+                                 analysing when internal_processing_state = accepting and request_accepted = '1' else
+                                 discarding when internal_processing_state = analysing and request_approved = '0' and analysing_done = '1' else
+                                 receiving when internal_processing_state = analysing and request_approved = '1' and analysing_done = '1' else
+                                 internal_processing_state;
 
-            if data_ready = '1' then
-                current_request <= s_rrcam_doutb;
-                data_ready <= '0';
-            end if;
+    internal_processing_FSM: process(reset, clock)
+        variable req_pckt : service_request_packet;
+    begin
+        if rising_edge(clock) then
+            case internal_processing_state is
+                when waiting =>
+                    s_rrcam_enb <= '0';
+                    s_rrcam_addrb <= (others => '0');
+                    current_request <= ((others => '0'), (others => '0'), (others => '0'));
+                    request_record_rp <= 0;
+                    data_ready <= '0';
+                    request_accepted <= '0';
+                    request_approved <= '0';
+                    s_credit_out_processing <= '1';
+                    s_tx <= '0';
+                    send_response_counter <= 0;
+                    analysing_done <= '0';
+                    s_data_out <= (others => '0');
+
+                    if s_rrcam_has_data = '1'then
+                        s_rrcam_addrb <= std_logic_vector(to_unsigned(request_record_rp, 8));
+                        s_rrcam_enb <= '1';
+                        data_ready <= '1';
+                        request_record_rp <= request_record_rp + 1;
+                    end if;
+
+                when accepting =>
+
+                    if data_ready = '1' then
+                        data_ready <= '0';
+                        current_request <= s_rrcam_doutb;
+
+                        req_pckt(0) := x"0000";
+                        req_pckt(1) := x"0003";
+                        req_pckt(2) := service_request_response_ack;
+                        req_pckt(3) := x"FAFA";
+                        req_pckt(4) := s_rrcam_doutb.task_id;
+
+                    else
+                        -- Send request ack to the network
+                        if credit_in = '1' and send_response_counter < req_pckt'length then
+                            s_tx <= '1';
+                            s_data_out <= req_pckt(send_response_counter);
+                            send_response_counter <= send_response_counter + 1;
+                        elsif send_response_counter = req_pckt'length then
+                            s_tx <= '0';
+                            s_data_out <= (others => '0');
+                            request_accepted <= '1';
+                        end if;
+                    end if;
+
+                when analysing =>
+                    -- TODO: Security check using criptography keys in the future
+                    analysing_done <= '1';
+                    request_approved <= '1';
+
+                when discarding =>
+                    -- TODO: send request nack
+
+                when receiving =>
+                when responding =>
+                when working =>
+                when terminating =>
+            end case;
         end if;
-    end process;
+    end process internal_processing_FSM;
 
     -- NOC interface control states
     interface_noc_state <=      initializing when reset = '1' else
@@ -185,8 +234,6 @@ begin
             case interface_noc_state is
                 when initializing =>
                     s_credit_out_analysis <= '0';
-                    s_data_out <= (others => '0');
-                    s_tx <= '0';
 
                     -- clear internal signals
                     s_has_message <= '0';
@@ -204,7 +251,6 @@ begin
                 when waiting =>
                     -- Waiting for incomming messages
                     s_credit_out_analysis <= '1';
-                    s_tx <= '0';
 
                     if rx = '1' then
                         s_has_message <= '1';
