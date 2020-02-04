@@ -27,7 +27,7 @@ architecture topNoC of topNoC is
 	-- 000A = task id
 
 	constant pck2 : service_request_packet := (
-		x"C122", x"0003", x"1001", x"0000", x"000B"
+		x"C122", x"0003", service_request, x"0000", x"000B"
 	);
 
 begin

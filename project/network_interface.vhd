@@ -43,7 +43,6 @@ signal s_data_out   : regflit;
 signal s_tx         : std_logic;
 
 signal s_credit_out_analysis   : std_logic;
-signal s_credit_out_processing : std_logic;
 
 signal s_has_message         : std_logic;
 signal s_buffer_full         : std_logic;
@@ -100,6 +99,18 @@ signal request_approved         : std_logic;
 signal analysing_done           : std_logic;
 signal send_response_counter    : integer;
 
+signal write_request_processing : std_logic;
+signal read_request_processing  : std_logic;
+signal write_request_done       : std_logic;
+signal nack_sent                : std_logic;
+
+type response_sender is (waiting, sending_request_ack, sending_request_nack);
+signal response_sender_state    : response_sender;
+signal request_ack_sent         : std_logic;
+signal send_ack_request         : std_logic;
+signal send_nack_request         : std_logic;
+signal waiting_write_request    : std_logic;
+
 begin
 
     -- Signals to control the Wishbone peripheral
@@ -130,6 +141,64 @@ begin
         end if;
     end process;
 
+    -- Send responses to the network
+    response_sender_state <= waiting when reset = '1' else
+                             sending_request_ack when response_sender_state = waiting and internal_processing_state = accepting and send_ack_request = '1' else
+                             sending_request_nack when response_sender_state = waiting and interface_noc_state = analysing and send_nack_request = '1' else
+                             waiting when response_sender_state = sending_request_ack and request_ack_sent = '1' else
+                             response_sender_state;
+
+    response_sender_fsm: process(reset, clock)
+        variable req_pckt : service_request_packet;
+    begin
+        if rising_edge(clock) then
+            case response_sender_state is
+
+                when waiting =>
+                    s_tx <= '0';
+                    s_data_out <= (others => '0');
+                    request_ack_sent <= '0';
+                    send_response_counter <= 0;
+
+                when sending_request_ack =>
+
+                    req_pckt(0) := x"0000";
+                    req_pckt(1) := x"0003";
+                    req_pckt(2) := service_request_response_ack;
+                    req_pckt(3) := x"FAFA";
+                    req_pckt(4) := current_request.task_id;
+
+                    if credit_in = '1' and send_response_counter < req_pckt'length then
+                        s_tx <= '1';
+                        s_data_out <= req_pckt(send_response_counter);
+                        send_response_counter <= send_response_counter + 1;
+                    elsif send_response_counter = req_pckt'length then
+                        s_tx <= '0';
+                        s_data_out <= (others => '0');
+                        request_ack_sent <= '1';
+                    end if;
+
+                when sending_request_nack =>
+
+                    req_pckt(0) := x"0000";
+                    req_pckt(1) := x"0003";
+                    req_pckt(2) := service_request_response_nack;
+                    req_pckt(3) := x"FAFA";
+                    req_pckt(4) := current_request.task_id;
+
+                    if credit_in = '1' and send_response_counter < req_pckt'length then
+                        s_tx <= '1';
+                        s_data_out <= req_pckt(send_response_counter);
+                        send_response_counter <= send_response_counter + 1;
+                    elsif send_response_counter = req_pckt'length then
+                        s_tx <= '0';
+                        s_data_out <= (others => '0');
+                        request_ack_sent <= '1';
+                    end if;
+            end case;
+        end if;
+    end process;
+
     -- Read from requests memory
     internal_processing_state <= waiting when reset = '1' else
                                  accepting when internal_processing_state = waiting and data_ready = '1' else
@@ -151,12 +220,13 @@ begin
                     data_ready <= '0';
                     request_accepted <= '0';
                     request_approved <= '0';
-                    s_credit_out_processing <= '1';
-                    s_tx <= '0';
-                    send_response_counter <= 0;
                     analysing_done <= '0';
-                    s_data_out <= (others => '0');
+                    write_request_done <= '0';
+                    nack_sent <= '0';
+                    send_ack_request <= '0';
+                    waiting_write_request <= '0';
 
+                    -- read the request from memory
                     if s_rrcam_has_data = '1'then
                         s_rrcam_addrb <= std_logic_vector(to_unsigned(request_record_rp, 8));
                         s_rrcam_enb <= '1';
@@ -169,33 +239,28 @@ begin
                     if data_ready = '1' then
                         data_ready <= '0';
                         current_request <= s_rrcam_doutb;
+                    end if;
 
-                        req_pckt(0) := x"0000";
-                        req_pckt(1) := x"0003";
-                        req_pckt(2) := service_request_response_ack;
-                        req_pckt(3) := x"FAFA";
-                        req_pckt(4) := s_rrcam_doutb.task_id;
-
+                    if data_ready = '0' and waiting_write_request = '0' then
+                        -- After reading the request from memory sends an ack message in order to accept it
+                        send_ack_request <= '1';
+                        waiting_write_request <= '1';
                     else
-                        -- Send request ack to the network
-                        if credit_in = '1' and send_response_counter < req_pckt'length then
-                            s_tx <= '1';
-                            s_data_out <= req_pckt(send_response_counter);
-                            send_response_counter <= send_response_counter + 1;
-                        elsif send_response_counter = req_pckt'length then
-                            s_tx <= '0';
-                            s_data_out <= (others => '0');
-                            request_accepted <= '1';
-                        end if;
+                        send_ack_request <= '0';
+                    end if;
+
+                    -- TODO: Implement a time-out mechanism in case where the write request message is never sent to the NI 
+                    if write_request_processing = '1' and waiting_write_request = '1' then
+                        request_accepted <= '1';
                     end if;
 
                 when analysing =>
                     -- TODO: Security check using criptography keys in the future
                     analysing_done <= '1';
-                    request_approved <= '1';
+                    request_approved <= '0';
 
                 when discarding =>
-                    -- TODO: send request nack
+                    -- TODO: discard the data since the request is already accepted but it didn't pass in some security check
 
                 when receiving =>
                 when responding =>
@@ -215,7 +280,7 @@ begin
                                 waiting      when interface_noc_state = refusing and s_refusing_done = '1' else
                                 interface_noc_state;
 
-    credit_out <= s_credit_out_processing and s_credit_out_analysis;
+    credit_out <= s_credit_out_analysis;
     data_out <= s_data_out;
     tx <= s_tx;
     packet_length <= to_integer(unsigned(header_flit_2(7 downto 0)));
@@ -263,6 +328,7 @@ begin
                     s_rrcam_addra <= (others => '0');
                     s_rrcam_wea <= '0';
                     s_rrcam_dina <= ((others => '0'), (others => '0'), (others => '0'));
+                    send_nack_request <= '0';
 
                 when analysing =>
                     if buffering_header_counter = 0 then
@@ -285,23 +351,33 @@ begin
                             -- Refuse the request if buffer is full
                             if s_buffer_full = '1' then
                                 s_should_buffer <= '0';
-                                -- TODO: Activate the "Processing" state machine to send a REQUEST_NACK back to the network
+                                -- Activate the "Processing" state machine to send a REQUEST_NACK back to the network
+                                send_nack_request <= '1';
+                                s_analysing_done <= '1';
                             else
                                 s_should_buffer <= '1';
+                                s_analysing_done <= '1';
                             end if;
 
                         elsif data_in = service_request_write then
                             -- TODO: Activate the "Processing" state machine to process the input from the network and write to the peripheral
+                            if write_request_done = '0' then
+                                write_request_processing <= '1';
+                            else
+                                write_request_processing <= '0';
+                                s_analysing_done <= '1';
+                            end if;
 
                         elsif data_in = service_request_read then
                             -- TODO: Activate the "Processing" state machine to read from the peripheral and send the response to the network
+                            read_request_processing <= '1';
+                            s_analysing_done <= '0';
                         
                         else
                             -- Unknown services are just ignored without sending anything back to the network as response
                             s_should_buffer <= '0';
+                            s_analysing_done <= '1';
                         end if;
-
-                        s_analysing_done <= '1';
                     end if;
 
                     buffering_header_counter <= buffering_header_counter + 1;
