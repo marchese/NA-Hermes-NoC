@@ -114,6 +114,9 @@ signal waiting_write_request    : std_logic;
 signal waiting_nack_sent        : std_logic;
 signal discard_done             : std_logic;
 signal discarding_counter       : integer;
+signal receiving_done           : std_logic;
+signal responding_done          : std_logic;
+signal receiving_counter        : integer;
 
 begin
 
@@ -211,6 +214,8 @@ begin
                                  discarding when internal_processing_state = analysing and request_approved = '0' and analysing_done = '1' else
                                  receiving when internal_processing_state = analysing and request_approved = '1' and analysing_done = '1' else
                                  waiting when internal_processing_state = discarding and discard_done = '1' else
+                                 responding when internal_processing_state = receiving and receiving_done = '1' else
+                                 waiting when internal_processing_state = responding and responding_done = '1' else
                                  internal_processing_state;
 
     internal_processing_FSM: process(reset, clock)
@@ -232,6 +237,9 @@ begin
                     waiting_write_request <= '0';
                     discard_done <= '0';
                     discarding_counter <= 0;
+                    receiving_done <= '0';
+                    responding_done <= '0';
+                    receiving_counter <= 0;
 
                     -- read the request from memory
                     if s_rrcam_has_data = '1'then
@@ -264,7 +272,7 @@ begin
                 when analysing =>
                     -- TODO: Security check using criptography keys in the future
                     analysing_done <= '1';
-                    request_approved <= '0'; -- TODO: change to approved since we have no security check implemented yet
+                    request_approved <= '1';
 
                 when discarding =>
                     -- discard the data since the request is already accepted but it didn't pass in some security check
@@ -276,7 +284,18 @@ begin
                     discarding_counter <= discarding_counter + 1;
 
                 when receiving =>
+                    -- TODO: send data to the peripheral
+                    if receiving_counter = packet_length - 3 then
+                        receiving_done <= '1';
+                        write_request_done <= '1';
+                    end if;
+
+                    receiving_counter <= receiving_counter + 1;
+
                 when responding =>
+                    responding_done <= '1';
+                    -- TODO: send write ack
+
                 when working =>
                 when terminating =>
             end case;
@@ -287,6 +306,7 @@ begin
     interface_noc_state <=      initializing when reset = '1' else
                                 waiting      when interface_noc_state = initializing and s_initialization_done = '1' else
                                 analysing    when interface_noc_state = waiting and s_has_message = '1' else
+                                waiting      when interface_noc_state = analysing and write_request_done = '1' else
                                 refusing     when interface_noc_state = analysing and s_analysing_done = '1' and s_should_buffer = '0' else
                                 buffering    when interface_noc_state = analysing and s_analysing_done = '1' and s_should_buffer = '1' else
                                 waiting      when interface_noc_state = buffering and s_buffering_done = '1' else
@@ -361,11 +381,11 @@ begin
                     elsif buffering_header_counter = 1 then
                         -- Save the third flit (service)
                         header_flit_3 <= data_in;
-
                         s_credit_out_analysis <= '1';
-
+                        buffering_header_counter <= buffering_header_counter + 1;
+                    else
                         -- Service request
-                        if data_in = service_request then
+                        if header_flit_3 = service_request then
                             -- Refuse the request if buffer is full
                             if s_buffer_full = '1' then
                                 s_should_buffer <= '0';
@@ -374,19 +394,13 @@ begin
                             end if;
                             s_analysing_done <= '1';
 
-                        elsif data_in = service_request_write then
-                            -- TODO: Activate the "Processing" state machine to process the input from the network and write to the peripheral
-                            if write_request_done = '0' then
-                                write_request_processing <= '1';
-                            else
-                                write_request_processing <= '0';
-                                s_analysing_done <= '1';
-                            end if;
+                        elsif header_flit_3 = service_request_write then
+                            -- Activate the "Processing" state machine to process the input from the network and write to the peripheral
+                            write_request_processing <= '1';
 
-                        elsif data_in = service_request_read then
+                        elsif header_flit_3 = service_request_read then
                             -- TODO: Activate the "Processing" state machine to read from the peripheral and send the response to the network
                             read_request_processing <= '1';
-                            s_analysing_done <= '0';
                         
                         else
                             -- Unknown services are just ignored without sending anything back to the network as response
