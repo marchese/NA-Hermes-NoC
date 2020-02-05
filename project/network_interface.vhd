@@ -105,7 +105,7 @@ signal read_request_processing  : std_logic;
 signal write_request_done       : std_logic;
 signal nack_sent                : std_logic;
 
-type response_sender is (waiting, sending_request_ack, sending_request_nack);
+type response_sender is (waiting, sending_request_ack, sending_request_nack, sending_write_response, sending_read_response);
 signal response_sender_state    : response_sender;
 signal request_ack_sent         : std_logic;
 signal send_ack_request         : std_logic;
@@ -117,6 +117,7 @@ signal discarding_counter       : integer;
 signal receiving_done           : std_logic;
 signal responding_done          : std_logic;
 signal receiving_counter        : integer;
+signal send_write_response      : std_logic;
 
 begin
 
@@ -152,12 +153,16 @@ begin
     response_sender_state <= waiting when reset = '1' else
                              sending_request_ack when response_sender_state = waiting and internal_processing_state = accepting and send_ack_request = '1' else
                              sending_request_nack when response_sender_state = waiting and interface_noc_state = refusing and send_nack_request = '1' else
+                             sending_write_response when response_sender_state = waiting and internal_processing_state = responding and send_write_response = '1' else
                              waiting when response_sender_state = sending_request_ack and request_ack_sent = '1' else
                              waiting when response_sender_state = sending_request_nack and request_ack_sent = '1' else
+                             waiting when response_sender_state = sending_write_response and request_ack_sent = '1' else
+                             waiting when response_sender_state = sending_read_response and request_ack_sent = '1' else
                              response_sender_state;
 
     response_sender_fsm: process(reset, clock)
         variable req_pckt : service_request_packet;
+        variable write_ack_pckt : service_write_response_packet;
     begin
         if rising_edge(clock) then
             case response_sender_state is
@@ -172,7 +177,7 @@ begin
 
                     req_pckt(0) := x"0000";
                     req_pckt(1) := x"0003";
-                    req_pckt(2) := service_request_response_ack;
+                    req_pckt(2) := service_request_ack;
                     req_pckt(3) := x"FAFA";
                     req_pckt(4) := current_request_processing.task_id;
 
@@ -190,7 +195,7 @@ begin
 
                     req_pckt(0) := x"0000";
                     req_pckt(1) := x"0003";
-                    req_pckt(2) := service_request_response_nack;
+                    req_pckt(2) := service_request_nack;
                     req_pckt(3) := x"FAFA";
                     req_pckt(4) := current_request_analysis.task_id;
 
@@ -203,6 +208,28 @@ begin
                         s_data_out <= (others => '0');
                         request_ack_sent <= '1';
                     end if;
+
+                when sending_write_response =>
+
+                    write_ack_pckt(0) := x"0000";
+                    write_ack_pckt(1) := x"0004";
+                    write_ack_pckt(2) := service_write_response;
+                    write_ack_pckt(3) := x"FAFA";
+                    write_ack_pckt(4) := current_request_processing.task_id;
+                    write_ack_pckt(5) := x"0001";
+
+                    if credit_in = '1' and send_response_counter < write_ack_pckt'length then
+                        s_tx <= '1';
+                        s_data_out <= write_ack_pckt(send_response_counter);
+                        send_response_counter <= send_response_counter + 1;
+                    elsif send_response_counter = write_ack_pckt'length then
+                        s_tx <= '0';
+                        s_data_out <= (others => '0');
+                        request_ack_sent <= '1';
+                    end if;
+
+                when sending_read_response =>
+                -- TODO: Send read response
             end case;
         end if;
     end process;
@@ -215,7 +242,7 @@ begin
                                  receiving when internal_processing_state = analysing and request_approved = '1' and analysing_done = '1' else
                                  waiting when internal_processing_state = discarding and discard_done = '1' else
                                  responding when internal_processing_state = receiving and receiving_done = '1' else
-                                 waiting when internal_processing_state = responding and responding_done = '1' else
+                                 waiting when internal_processing_state = responding and request_ack_sent = '1' else
                                  internal_processing_state;
 
     internal_processing_FSM: process(reset, clock)
@@ -240,6 +267,7 @@ begin
                     receiving_done <= '0';
                     responding_done <= '0';
                     receiving_counter <= 0;
+                    send_write_response <= '0';
 
                     -- read the request from memory
                     if s_rrcam_has_data = '1'then
@@ -293,8 +321,7 @@ begin
                     receiving_counter <= receiving_counter + 1;
 
                 when responding =>
-                    responding_done <= '1';
-                    -- TODO: send write ack
+                    send_write_response <= '1';
 
                 when working =>
                 when terminating =>

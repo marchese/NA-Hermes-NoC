@@ -45,6 +45,8 @@ do wave.do
 
 run 4 us
 
+wave zoom full
+
 #quit -sim
 #quit -f
 

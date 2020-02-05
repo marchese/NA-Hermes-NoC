@@ -115,16 +115,15 @@ package HermesPackage is
 
 	type service_request_packet is array (0 to 4) of std_logic_vector(TAM_FLIT-1 downto 0);
 	type service_request_write_packet is array (0 to 9) of std_logic_vector(TAM_FLIT-1 downto 0);
+	type service_write_response_packet is array (0 to 5) of std_logic_vector(TAM_FLIT-1 downto 0);
 
-	constant service_request                     : std_logic_vector(TAM_FLIT-1 downto 0) := x"1010";
-	constant service_request_response_ack        : std_logic_vector(TAM_FLIT-1 downto 0) := x"1011";
-	constant service_request_response_nack       : std_logic_vector(TAM_FLIT-1 downto 0) := x"1012";
-	constant service_request_write               : std_logic_vector(TAM_FLIT-1 downto 0) := x"1020";
-	constant service_request_write_response_ack  : std_logic_vector(TAM_FLIT-1 downto 0) := x"1021";
-	constant service_request_write_response_nack : std_logic_vector(TAM_FLIT-1 downto 0) := x"1022";
-	constant service_request_read                : std_logic_vector(TAM_FLIT-1 downto 0) := x"1030";
-	constant service_request_read_response_ack   : std_logic_vector(TAM_FLIT-1 downto 0) := x"1031";
-	constant service_request_read_response_nack  : std_logic_vector(TAM_FLIT-1 downto 0) := x"1032";
+	constant service_request       : std_logic_vector(TAM_FLIT-1 downto 0) := x"1010";
+	constant service_request_ack   : std_logic_vector(TAM_FLIT-1 downto 0) := x"1011";
+	constant service_request_nack  : std_logic_vector(TAM_FLIT-1 downto 0) := x"1012";
+	constant service_request_write : std_logic_vector(TAM_FLIT-1 downto 0) := x"1020";
+	constant service_write_response     : std_logic_vector(TAM_FLIT-1 downto 0) := x"1021";
+	constant service_request_read  : std_logic_vector(TAM_FLIT-1 downto 0) := x"1030";
+	constant service_read_response      : std_logic_vector(TAM_FLIT-1 downto 0) := x"1031";
 
 end HermesPackage;
 

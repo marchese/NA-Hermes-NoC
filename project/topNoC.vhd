@@ -17,6 +17,8 @@ architecture topNoC of topNoC is
 	signal address1, data1 : std_logic_vector(15 downto 0);
 	signal ce1 : std_logic;
 
+	-- Requests:  00 -> 10 -> 20 -> 21 -> 22
+	-- Responses: 22 -> 12 -> 02 -> 01 -> 00
 	constant pck1 : service_request_packet := (
 		x"C122", x"0003", service_request, x"0000", x"000A" );
 
