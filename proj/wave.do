@@ -84,9 +84,7 @@ add wave -format Logic /topnoc/noc1/credit_i(0)(2)
 add wave -format Literal -radix hexadecimal /topnoc/noc1/data_in(0)(2)
 
 
-add wave -divider {router 00 local port in}
-add wave -format Logic /topnoc/noc1/rx(0)(4)
-add wave -format Logic /topnoc/noc1/credit_o(0)(4)
+add wave -divider {router 00 local port out}
 add wave -format Logic /topnoc/noc1/tx(0)(4)
 add wave -format Logic /topnoc/noc1/credit_i(0)(4)
-add wave -format Literal -radix hexadecimal /topnoc/noc1/data_in(0)(4)
+add wave -format Literal -radix hexadecimal /topnoc/noc1/data_out(0)(4)
