@@ -3,12 +3,6 @@ This project proposes a network adapter to the Hermes-NoC. The network adapter e
 
 **Use the following commands to start the simulation.**
 
-  `cd project`
+  `cd proj`
 
   `vsim -do simulate.do`
-
-  `do wave.do`
-
-  `restart`
-
-  `run 4 us`

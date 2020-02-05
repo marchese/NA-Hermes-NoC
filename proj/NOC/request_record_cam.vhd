@@ -28,20 +28,20 @@ begin
 
 process (clka)
 begin
-    if (rising_edge(clka)) then
-        if wea = '1' then
-            mem(to_integer(ieee.NUMERIC_STD.UNSIGNED(addra))) <= dina;
-        end if;
-    end if;
+   if (rising_edge(clka)) then
+      if wea = '1' then
+         mem(to_integer(ieee.NUMERIC_STD.UNSIGNED(addra))) <= dina;
+      end if;
+   end if;
 end process;
 
 process (clkb)
 begin
-    if (rising_edge(clkb)) then
-        if enb = '1' then
-            doutb <= mem(to_integer(ieee.NUMERIC_STD.UNSIGNED(addrb)));
-        end if;
-    end if;
+   if (rising_edge(clkb)) then
+      if enb = '1' then
+         doutb <= mem(to_integer(ieee.NUMERIC_STD.UNSIGNED(addrb)));
+      end if;
+   end if;
 end process;
 
 end request_cam_256;
