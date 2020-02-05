@@ -29,7 +29,8 @@ entity network_interface is
         write_en     : out std_logic;
         stb          : out std_logic;
         ack          : in  std_logic;
-        cyc          : out std_logic
+        cyc          : out std_logic;
+        stall        : in  std_logic
     );
 end;
 
