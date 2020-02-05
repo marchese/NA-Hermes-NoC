@@ -185,7 +185,7 @@ begin
                      s_tx <= '1';
                      s_data_out <= req_pckt(send_response_counter);
                      send_response_counter <= send_response_counter + 1;
-                  elsif send_response_counter = req_pckt'length then
+                  elsif credit_in = '1' and send_response_counter = req_pckt'length then
                      s_tx <= '0';
                      s_data_out <= (others => '0');
                      request_ack_sent <= '1';
@@ -203,7 +203,7 @@ begin
                      s_tx <= '1';
                      s_data_out <= req_pckt(send_response_counter);
                      send_response_counter <= send_response_counter + 1;
-                  elsif send_response_counter = req_pckt'length then
+                  elsif credit_in = '1' and send_response_counter = req_pckt'length then
                      s_tx <= '0';
                      s_data_out <= (others => '0');
                      request_ack_sent <= '1';
@@ -222,7 +222,7 @@ begin
                      s_tx <= '1';
                      s_data_out <= write_ack_pckt(send_response_counter);
                      send_response_counter <= send_response_counter + 1;
-                  elsif send_response_counter = write_ack_pckt'length then
+                  elsif credit_in = '1' and send_response_counter = write_ack_pckt'length then
                      s_tx <= '0';
                      s_data_out <= (others => '0');
                      request_ack_sent <= '1';

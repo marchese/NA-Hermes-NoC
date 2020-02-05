@@ -31,6 +31,8 @@ signal header : regflit := (others=> '0');
 -- sinais do controle
 signal dirx,diry: integer range 0 to (NPORT-1) := 0;
 signal lx,ly,tx,ty: regquartoflit := (others=> '0');
+signal io: std_logic;
+signal io_diry: integer range 0 to (NPORT-1) := 0;
 signal auxfree: regNport := (others=> '0');
 signal source:  arrayNport_reg3 := (others=> (others=> '0'));
 signal sender_ant: regNport := (others=> '0');
@@ -84,6 +86,9 @@ begin
    tx <= header((METADEFLIT - 1) downto QUARTOFLIT);
    ty <= header((QUARTOFLIT - 1) downto 0);
 
+   io <= header((TAM_FLIT - 1));
+   io_diry <= NORTH when ly < ty or (io = '1' and header(TAM_FLIT - 2) = '1') else SOUTH;
+
    dirx <= WEST when lx > tx else EAST;
    diry <= NORTH when ly < ty else SOUTH;
 
@@ -129,7 +134,8 @@ begin
          when S0 => PES <= S1;
          when S1 => if ask='1' then PES <= S2; else PES <= S1; end if;
          when S2 => PES <= S3;
-         when S3 => if lx = tx and ly = ty and auxfree(LOCAL)='1' then PES<=S4;
+         when S3 => if lx = tx and ly = ty and auxfree(LOCAL)='1' and io = '0' then PES<=S4;
+               elsif lx = tx and ly = ty and io = '1' and auxfree(io_diry) = '1' then PES<=S6;
                elsif lx /= tx and auxfree(dirx)='1' then PES<=S5;
                elsif lx = tx and ly /= ty and auxfree(diry)='1' then PES<=S6;
                else PES<=S1; end if;
@@ -175,9 +181,16 @@ begin
                ack_h(sel)<='1';
             -- Estabelece a conexão com a porta NORTH ou SOUTH
             when S6 =>
-               source(CONV_INTEGER(incoming)) <= CONV_VECTOR(diry);
-               mux_out(diry) <= incoming;
-               auxfree(diry) <= '0';
+               if io = '0' then
+                  source(CONV_INTEGER(incoming)) <= CONV_VECTOR(diry);
+                  mux_out(diry) <= incoming;
+                  auxfree(diry) <= '0';
+               else
+                  source(CONV_INTEGER(incoming)) <= CONV_VECTOR(io_diry);
+                  mux_out(io_diry) <= incoming;
+                  auxfree(io_diry) <= '0';
+               end if;
+
                ack_h(sel)<='1';
             when others => ack_h(sel)<='0';
          end case;

@@ -149,6 +149,15 @@ architecture NOC of NOC is
 
    type router_position is array (NB_ROUTERS-1 downto 0) of integer range 0 to TR;
 
+   signal wb_reset    : std_logic;
+   signal wb_address  : std_logic_vector(7 downto 0);
+   signal wb_data_i   : std_logic_vector(TAM_FLIT-1 downto 0);
+   signal wb_data_o   : std_logic_vector(TAM_FLIT-1 downto 0);
+   signal wb_write_en : std_logic;
+   signal wb_stb      : std_logic;
+   signal wb_ack      : std_logic;
+   signal wb_cyc      : std_logic;
+
 begin
 
 
@@ -220,7 +229,9 @@ begin
       -------------------------------------------------------------------------------
       --- NORTH PORT CONNECTIONS ----------------------------------------------------
       -------------------------------------------------------------------------------
-      north_grounding: if routerPosition(i,X_ROUTERS,Y_ROUTERS)=TL or routerPosition(i,X_ROUTERS,Y_ROUTERS)=TC or routerPosition(i,X_ROUTERS,Y_ROUTERS)=TR generate
+      -- TR router is excluded from the grounding logic because it is connected to a
+      -- peripheral. See the TR PERIPHERAL section in this file.
+      north_grounding: if routerPosition(i,X_ROUTERS,Y_ROUTERS)=TL or routerPosition(i,X_ROUTERS,Y_ROUTERS)=TC generate
          rx(i)(NORTH)            <= '0';
          clock_rx(i)(NORTH)      <= '0';
          credit_i(i)(NORTH)      <= '0';
@@ -251,9 +262,48 @@ begin
          data_in(i)(SOUTH)       <= data_out(i-X_ROUTERS)(NORTH);
       end generate;
 
+   end generate noc;
 
-end generate noc;
 
+   -------------------------------------------------------------------------------
+   --- TR PERIPHERAL -------------------------------------------------------------
+   -------------------------------------------------------------------------------
+
+   clock_rx(N0202)(NORTH) <= clock(N0202);
+
+   network_interface : entity work.network_interface
+   port map (
+      clock => clock(N0202),
+      reset => reset,
+      rx => tx(N0202)(NORTH),
+      tx => rx(N0202)(NORTH),
+      credit_in => credit_o(N0202)(NORTH),
+      credit_out => credit_i(N0202)(NORTH),
+      data_in => data_out(N0202)(NORTH),
+      data_out => data_in(N0202)(NORTH),
+
+      per_reset => wb_reset,
+      address => wb_address,
+      data_i => wb_data_i,
+      data_o => wb_data_o,
+      write_en  => wb_write_en,
+      stb => wb_stb,
+      ack => wb_ack,
+      cyc => wb_cyc
+   );
+
+   wishbone_peripheral : entity work.test_wishbone_peripheral
+   port map(
+      clock => clock(N0202),
+      reset => wb_reset,
+      adr_i => wb_address,
+      dat_i => wb_data_o,
+      dat_o => wb_data_i,
+      we_i  => wb_write_en,
+      stb_i => wb_stb,
+      ack_o => wb_ack,
+      cyc_i => wb_cyc
+   );
 
 
 end NOC;

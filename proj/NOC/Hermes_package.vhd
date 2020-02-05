@@ -56,6 +56,19 @@ package HermesPackage is
    function CONV_VECTOR( int: integer ) return std_logic_vector;
 
 ---------------------------------------------------------
+-- CONSTANT TB
+---------------------------------------------------------
+   constant N0000: integer :=0;
+   constant N0100: integer :=1;
+   constant N0200: integer :=2;
+   constant N0001: integer :=3;
+   constant N0101: integer :=4;
+   constant N0201: integer :=5;
+   constant N0002: integer :=6;
+   constant N0102: integer :=7;
+   constant N0202: integer :=8;
+
+---------------------------------------------------------
 -- FUNCOES TB
 ---------------------------------------------------------
    function CONV_VECTOR( letra : string(1 to TAM_LINHA);  pos: integer ) return std_logic_vector;
@@ -64,6 +77,28 @@ package HermesPackage is
    function CONV_STRING_8BITS( dado : std_logic_vector(7 downto 0)) return string;
    function CONV_STRING_16BITS( dado : std_logic_vector(15 downto 0)) return string;
    function CONV_STRING_32BITS( dado : std_logic_vector(31 downto 0)) return string;
+
+---------------------------------------------------------
+-- NETWORK INTERFACE
+---------------------------------------------------------
+
+   type NI_SERVICE_REQUEST is record
+      task_id     : std_logic_vector(TAM_FLIT-1 downto 0);
+      source_pe   : std_logic_vector(TAM_FLIT-1 downto 0);
+      border_dir  : std_logic_vector(TAM_FLIT-1 downto 0);
+   end record NI_SERVICE_REQUEST; 
+
+   type service_request_packet is array (0 to 4) of std_logic_vector(TAM_FLIT-1 downto 0);
+   type service_request_write_packet is array (0 to 9) of std_logic_vector(TAM_FLIT-1 downto 0);
+   type service_write_response_packet is array (0 to 5) of std_logic_vector(TAM_FLIT-1 downto 0);
+
+   constant service_request       : std_logic_vector(TAM_FLIT-1 downto 0) := x"1010";
+   constant service_request_ack   : std_logic_vector(TAM_FLIT-1 downto 0) := x"1011";
+   constant service_request_nack  : std_logic_vector(TAM_FLIT-1 downto 0) := x"1012";
+   constant service_request_write : std_logic_vector(TAM_FLIT-1 downto 0) := x"1020";
+   constant service_write_response     : std_logic_vector(TAM_FLIT-1 downto 0) := x"1021";
+   constant service_request_read  : std_logic_vector(TAM_FLIT-1 downto 0) := x"1030";
+   constant service_read_response      : std_logic_vector(TAM_FLIT-1 downto 0) := x"1031";
 
 end HermesPackage;
 
