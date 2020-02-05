@@ -5,4 +5,4 @@ This project proposes a network adapter to the Hermes-NoC. The network adapter e
 
   `cd proj`
 
-  `vsim -do simulate.do`
+  `vsim -do sim.do`
