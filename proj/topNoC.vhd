@@ -40,6 +40,12 @@ architecture topNoC of topNoC is
       x"FF01", x"FF02", x"FF03", x"FF04", x"FF05"
    );
 
+   constant pck4 : service_request_packet := (
+      x"C122", x"0003", service_request_read, x"0000", x"000C"
+   );
+
+   --TODO: Add a service_request_packet for the read and then send the read request again
+
 begin
    reset <= '1', '0' after 15 ns;
 
@@ -134,6 +140,21 @@ begin
       while i < pck3'length loop
          if credit_o(N0000)='1' then
             data1 <= pck3(i);
+            ce1  <= '1';
+            wait for 20 ns;
+            ce1  <= '0';
+            wait for 20 ns;
+            i := i + 1;
+         else
+            wait for 20 ns;
+         end if;
+      end loop;
+
+      wait for 500 ns;
+      i := 0;
+      while i < pck4'length loop
+         if credit_o(N0000)='1' then
+            data1 <= pck4(i);
             ce1  <= '1';
             wait for 20 ns;
             ce1  <= '0';

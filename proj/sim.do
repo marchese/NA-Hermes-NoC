@@ -21,7 +21,7 @@ set StdVitalGlitchNoWarnings 1
 
 do wave.do 
 
-run 4 us
+run 5 us
 
 wave zoom full
 

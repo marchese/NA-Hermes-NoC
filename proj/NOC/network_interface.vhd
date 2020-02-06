@@ -456,11 +456,21 @@ begin
 
                      elsif header_flit_3 = service_request_write then
                            -- Activate the "Processing" state machine to process the input from the network and write to the peripheral
-                           write_request_processing <= '1';
+                           if internal_processing_state = accepting then
+                              write_request_processing <= '1';
+                           elsif write_request_processing = '0' then
+                              s_should_buffer <= '0';
+                              s_analysing_done <= '1';
+                           end if;
 
                      elsif header_flit_3 = service_request_read then
-                           -- TODO: Activate the "Processing" state machine to read from the peripheral and send the response to the network
-                           read_request_processing <= '1';
+                           -- Activate the "Processing" state machine to read from the peripheral and send the response to the network
+                           if internal_processing_state = accepting then
+                              read_request_processing <= '1';
+                           elsif read_request_processing = '0' then
+                              s_should_buffer <= '0';
+                              s_analysing_done <= '1';
+                           end if;
 
                      else
                            -- Unknown services are just ignored without sending anything back to the network as response
@@ -478,25 +488,33 @@ begin
 
                when refusing =>
 
-                  refusing_data_counter <= refusing_data_counter + 1;
+                  if rx = '1' then
+                     refusing_data_counter <= refusing_data_counter + 1;
+                  end if;
 
                   if header_flit_3 = service_request then
-                     if refusing_data_counter = 2 then
+                     if refusing_data_counter = 1 and rx = '1' then
                            -- Activate the "Processing" state machine to send a REQUEST_NACK back to the network
                            send_nack_request <= '1';
                            current_request_analysis.task_id <= data_in;
                            waiting_nack_sent <= '1';
                      end if;
                   else
-                     if refusing_data_counter = packet_length - 1 then
+                     if packet_length > 3 then
+                        if refusing_data_counter = packet_length - 4 then
                            s_refusing_done <= '1';
+                        end if;
+                     else
+                        if refusing_data_counter = 1 then
+                           s_refusing_done <= '1';
+                        end if;
                      end if;
                   end if;
 
                   if waiting_nack_sent = '1' then
                      send_nack_request <= '0';
                      if request_ack_sent = '1' then
-                           s_refusing_done <= '1';
+                        s_refusing_done <= '1';
                      end if;
                   end if;
 
