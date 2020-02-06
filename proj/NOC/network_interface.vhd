@@ -57,6 +57,7 @@ signal s_should_buffer       : std_logic;
 signal header_flit_1 : std_logic_vector(TAM_FLIT-1 downto 0);
 signal header_flit_2 : std_logic_vector(TAM_FLIT-1 downto 0);
 signal header_flit_3 : std_logic_vector(TAM_FLIT-1 downto 0);
+signal source_pe     : std_logic_vector(TAM_FLIT-1 downto 0);
 
 signal tmp_buffer : std_logic_vector(TAM_FLIT-1 downto 0);
 
@@ -118,7 +119,7 @@ signal wishbone_sender_state    : wishbone_sender;
 signal send_write               : std_logic;
 signal s_cyc                    : std_logic;
 signal s_stb                    : std_logic;
-signal s_data_o                   : std_logic_vector(TAM_FLIT-1 downto 0);
+signal s_data_o                 : std_logic_vector(TAM_FLIT-1 downto 0);
 
 begin
 
@@ -132,7 +133,7 @@ begin
 
    cyc <= s_cyc;
    stb <= s_stb;
-   data_o <= s_data_o;
+   data_o <= s_data_o when wishbone_sender_state = sending_write else (others => '0');
 
    wishbone_sender_state <= waiting when s_per_reset = '1' else
                               sending_write when wishbone_sender_state = waiting and internal_processing_state = receiving and send_write = '1' else
@@ -145,11 +146,11 @@ begin
       if rising_edge(clock) then
          case wishbone_sender_state is
             when waiting =>
-               address    <= (others => '0');
-               s_data_o     <= (others => '0');
-               write_en   <= '0';
-               s_stb        <= '0';
-               s_cyc        <= '0';
+               address <= (others => '0');
+               s_data_o <= (others => '0');
+               write_en <= '0';
+               s_stb <= '0';
+               s_cyc <= '0';
             when sending_write =>
                if send_write = '1' then
                   s_cyc <= '1';
@@ -426,13 +427,16 @@ begin
                when analysing =>
                   if buffering_header_counter = 0 then
                      -- Save the first flit (service, target)
-                     header_flit_1 <= s_data_in;
+                     if s_rx = '1' then
+                        header_flit_1 <= s_data_in;
+                     end if;
                      -- Save the second flit (packet lenght)
-                     header_flit_2 <= data_in;
-
-                     -- Stop receiving data
-                     s_credit_out_analysis <= '0';
-                     buffering_header_counter <= buffering_header_counter + 1;
+                     if rx = '1' then
+                        header_flit_2 <= data_in;
+                        -- Stop receiving data
+                        s_credit_out_analysis <= '0';
+                        buffering_header_counter <= buffering_header_counter + 1;
+                     end if;
 
                   elsif buffering_header_counter = 1 then
                      -- Save the third flit (service)
@@ -497,25 +501,29 @@ begin
                   end if;
 
                when buffering =>
-                  --if s_rx = '1' then
-                     if buffering_data_counter = 2 then
+                  if rx = '1' then
+                     if buffering_data_counter = 0 then
+                        source_pe <= data_in;
+                     elsif buffering_data_counter = 1 then
                         service_request_record.border_dir <= header_flit_1;
-                        service_request_record.source_pe <= s_data_in;
+                        service_request_record.source_pe <= source_pe;
                         service_request_record.task_id <= data_in;
-
-                     elsif buffering_data_counter = 3 then
-                        s_buffering_done <= '1';
-                        s_buffer_full <= '1';
-
-                        -- Save record into a memory
-                        s_rrcam_addra <= std_logic_vector(to_unsigned(request_record_wp, 8));
-                        s_rrcam_wea <= '1';
-                        s_rrcam_dina <= service_request_record;
-                        request_record_wp <= request_record_wp + 1;
                      end if;
 
                      buffering_data_counter <= buffering_data_counter + 1;
-                  --end if;
+                  end if;
+
+                  if buffering_data_counter = 2 then
+                     s_buffering_done <= '1';
+                     s_buffer_full <= '1';
+
+                     -- Save record into a memory
+                     s_rrcam_addra <= std_logic_vector(to_unsigned(request_record_wp, 8));
+                     s_rrcam_wea <= '1';
+                     s_rrcam_dina <= service_request_record;
+                     request_record_wp <= request_record_wp + 1;
+                  end if;
+
 
          end case;
       end if;
