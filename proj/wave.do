@@ -1,5 +1,5 @@
 add wave -position end -group NetworkInterface sim:/topnoc/noc1/network_interface/*
-add wave -position end -group Peripheral sim:/topnoc/noc1/wishbone_peripheral/*
+add wave -position end -group Peripheral sim:/topnoc/noc1/wb_memory/*
 
 add wave -divider {data source}
 add wave -format Logic /topnoc/ce1

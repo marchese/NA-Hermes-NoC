@@ -157,6 +157,7 @@ architecture NOC of NOC is
    signal wb_stb      : std_logic;
    signal wb_ack      : std_logic;
    signal wb_cyc      : std_logic;
+   signal wb_stall    : std_logic;
 
 begin
 
@@ -289,10 +290,11 @@ begin
       write_en  => wb_write_en,
       stb => wb_stb,
       ack => wb_ack,
-      cyc => wb_cyc
+      cyc => wb_cyc,
+      stall => wb_stall
    );
 
-   wishbone_peripheral : entity work.test_wishbone_peripheral
+   wb_memory : entity work.wb_256x2_bytes_memory
    port map(
       clock => clock(N0202),
       reset => wb_reset,
@@ -302,7 +304,8 @@ begin
       we_i  => wb_write_en,
       stb_i => wb_stb,
       ack_o => wb_ack,
-      cyc_i => wb_cyc
+      cyc_i => wb_cyc,
+      stall_o => wb_stall
    );
 
 

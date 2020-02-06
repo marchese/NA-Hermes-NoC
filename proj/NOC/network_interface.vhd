@@ -29,7 +29,8 @@ entity network_interface is
         write_en     : out std_logic;
         stb          : out std_logic;
         ack          : in  std_logic;
-        cyc          : out std_logic
+        cyc          : out std_logic;
+        stall        : in  std_logic
     );
 end;
 
@@ -41,6 +42,7 @@ signal interface_noc_state      : interface_noc;
 signal s_data_in    : regflit;
 signal s_data_out   : regflit;
 signal s_tx         : std_logic;
+signal s_rx         : std_logic;
 
 signal s_credit_out_analysis   : std_logic;
 
@@ -52,19 +54,10 @@ signal s_buffering_done      : std_logic;
 signal s_refusing_done       : std_logic;
 signal s_should_buffer       : std_logic;
 
--- Wishbone peripheral interface
-signal s_per_reset  : std_logic;
-signal s_address    : std_logic_vector(7 downto 0);
-signal s_data_i     : std_logic_vector(TAM_FLIT-1 downto 0);
-signal s_data_o     : std_logic_vector(TAM_FLIT-1 downto 0);
-signal s_write_en   : std_logic;
-signal s_stb        : std_logic;
-signal s_ack        : std_logic;
-signal s_cyc        : std_logic;
-
 signal header_flit_1 : std_logic_vector(TAM_FLIT-1 downto 0);
 signal header_flit_2 : std_logic_vector(TAM_FLIT-1 downto 0);
 signal header_flit_3 : std_logic_vector(TAM_FLIT-1 downto 0);
+signal source_pe     : std_logic_vector(TAM_FLIT-1 downto 0);
 
 signal tmp_buffer : std_logic_vector(TAM_FLIT-1 downto 0);
 
@@ -119,35 +112,60 @@ signal responding_done          : std_logic;
 signal receiving_counter        : integer;
 signal send_write_response      : std_logic;
 
+-- Wishbone peripheral interface
+signal s_per_reset  : std_logic;
+type wishbone_sender is (waiting, sending_write, sending_read, cooldown);
+signal wishbone_sender_state    : wishbone_sender;
+signal send_write               : std_logic;
+signal s_cyc                    : std_logic;
+signal s_stb                    : std_logic;
+signal s_data_o                 : std_logic_vector(TAM_FLIT-1 downto 0);
+
 begin
-
-   -- Signals to control the Wishbone peripheral
-   s_per_reset  <= '0';
-   s_address    <= (others => '0');
-   s_data_o     <= (others => '0');
-   s_write_en   <= '0';
-   s_stb        <= '0';
-   s_cyc        <= '0';
-
 
    -- Signals to control de Request Record CAM
    s_rrcam_clka <= clock;
    s_rrcam_clkb <= clock;
    s_rrcam_has_data <= '1' when request_record_wp > request_record_rp else '0';
 
-   process(reset, clock)
+   -- Send wishbone requests to the peripheral
+   per_reset <= reset or s_per_reset;
+
+   cyc <= s_cyc;
+   stb <= s_stb;
+   data_o <= s_data_o when wishbone_sender_state = sending_write else (others => '0');
+
+   wishbone_sender_state <= waiting when s_per_reset = '1' else
+                              sending_write when wishbone_sender_state = waiting and internal_processing_state = receiving and send_write = '1' else
+                              cooldown when wishbone_sender_state = sending_write and send_write = '0' and ack = '1' else
+                              waiting when wishbone_sender_state = cooldown and s_cyc = '0' and s_stb = '0' else
+                              wishbone_sender_state;
+
+   wishbone_sender_fsm: process(reset, clock)
    begin
       if rising_edge(clock) then
-         per_reset <= s_per_reset;
-         address <= s_address;
-         s_data_i <= data_i;
-         data_o <= s_data_o;
-         write_en <= s_write_en;
-         stb <= s_stb;
-         s_ack <= ack;
-         cyc <= s_cyc;
+         case wishbone_sender_state is
+            when waiting =>
+               address <= (others => '0');
+               s_data_o <= (others => '0');
+               write_en <= '0';
+               s_stb <= '0';
+               s_cyc <= '0';
+            when sending_write =>
+               if send_write = '1' then
+                  s_cyc <= '1';
+                  s_stb <= '1';
+                  write_en <= '1';
+                  s_data_o <= s_data_in;
+               end if;
+            when cooldown =>
+               s_cyc <= '0';
+               s_stb <= '0';
+               write_en <= '0';
+            when sending_read =>
+         end case;
       end if;
-   end process;
+   end process wishbone_sender_fsm;
 
    -- Send responses to the network
    response_sender_state <= waiting when reset = '1' else
@@ -268,6 +286,8 @@ begin
                   responding_done <= '0';
                   receiving_counter <= 0;
                   send_write_response <= '0';
+                  send_write <= '0';
+                  s_per_reset <= '0';
 
                   -- read the request from memory
                   if s_rrcam_has_data = '1'then
@@ -312,13 +332,22 @@ begin
                   discarding_counter <= discarding_counter + 1;
 
                when receiving =>
-                  -- TODO: send data to the peripheral
-                  if receiving_counter = packet_length - 3 then
-                     receiving_done <= '1';
-                     write_request_done <= '1';
-                  end if;
+                  -- send data to the peripheral
+                  if s_rx <= '1' then
+                     if receiving_counter = 0 then
+                        send_write <= '1';
+                     end if;
 
-                  receiving_counter <= receiving_counter + 1;
+                     if receiving_counter = packet_length - 2 then
+                        write_request_done <= '1';
+                        receiving_done <= '1';
+                        send_write <= '0';
+                     end if;
+
+                     receiving_counter <= receiving_counter + 1;
+                  else
+                     send_write <= '0';
+                  end if;
 
                when responding =>
                   send_write_response <= '1';
@@ -349,6 +378,7 @@ begin
    begin
       if rising_edge(clock) then
          s_data_in <= data_in;
+         s_rx <= rx;
       end if;
    end process;
 
@@ -397,13 +427,16 @@ begin
                when analysing =>
                   if buffering_header_counter = 0 then
                      -- Save the first flit (service, target)
-                     header_flit_1 <= s_data_in;
+                     if s_rx = '1' then
+                        header_flit_1 <= s_data_in;
+                     end if;
                      -- Save the second flit (packet lenght)
-                     header_flit_2 <= data_in;
-
-                     -- Stop receiving data
-                     s_credit_out_analysis <= '0';
-                     buffering_header_counter <= buffering_header_counter + 1;
+                     if rx = '1' then
+                        header_flit_2 <= data_in;
+                        -- Stop receiving data
+                        s_credit_out_analysis <= '0';
+                        buffering_header_counter <= buffering_header_counter + 1;
+                     end if;
 
                   elsif buffering_header_counter = 1 then
                      -- Save the third flit (service)
@@ -423,11 +456,21 @@ begin
 
                      elsif header_flit_3 = service_request_write then
                            -- Activate the "Processing" state machine to process the input from the network and write to the peripheral
-                           write_request_processing <= '1';
+                           if internal_processing_state = accepting then
+                              write_request_processing <= '1';
+                           elsif write_request_processing = '0' then
+                              s_should_buffer <= '0';
+                              s_analysing_done <= '1';
+                           end if;
 
                      elsif header_flit_3 = service_request_read then
-                           -- TODO: Activate the "Processing" state machine to read from the peripheral and send the response to the network
-                           read_request_processing <= '1';
+                           -- Activate the "Processing" state machine to read from the peripheral and send the response to the network
+                           if internal_processing_state = accepting then
+                              read_request_processing <= '1';
+                           elsif read_request_processing = '0' then
+                              s_should_buffer <= '0';
+                              s_analysing_done <= '1';
+                           end if;
 
                      else
                            -- Unknown services are just ignored without sending anything back to the network as response
@@ -445,37 +488,50 @@ begin
 
                when refusing =>
 
-                  refusing_data_counter <= refusing_data_counter + 1;
+                  if rx = '1' then
+                     refusing_data_counter <= refusing_data_counter + 1;
+                  end if;
 
                   if header_flit_3 = service_request then
-                     if refusing_data_counter = 2 then
+                     if refusing_data_counter = 1 and rx = '1' then
                            -- Activate the "Processing" state machine to send a REQUEST_NACK back to the network
                            send_nack_request <= '1';
                            current_request_analysis.task_id <= data_in;
                            waiting_nack_sent <= '1';
                      end if;
                   else
-                     if refusing_data_counter = packet_length - 1 then
+                     if packet_length > 3 then
+                        if refusing_data_counter = packet_length - 4 then
                            s_refusing_done <= '1';
+                        end if;
+                     else
+                        if refusing_data_counter = 1 then
+                           s_refusing_done <= '1';
+                        end if;
                      end if;
                   end if;
 
                   if waiting_nack_sent = '1' then
                      send_nack_request <= '0';
                      if request_ack_sent = '1' then
-                           s_refusing_done <= '1';
+                        s_refusing_done <= '1';
                      end if;
                   end if;
 
                when buffering =>
+                  if rx = '1' then
+                     if buffering_data_counter = 0 then
+                        source_pe <= data_in;
+                     elsif buffering_data_counter = 1 then
+                        service_request_record.border_dir <= header_flit_1;
+                        service_request_record.source_pe <= source_pe;
+                        service_request_record.task_id <= data_in;
+                     end if;
 
-                  s_should_buffer <= '0';
+                     buffering_data_counter <= buffering_data_counter + 1;
+                  end if;
+
                   if buffering_data_counter = 2 then
-                     service_request_record.border_dir <= header_flit_1;
-                     service_request_record.source_pe <= s_data_in;
-                     service_request_record.task_id <= data_in;
-
-                  elsif buffering_data_counter = 3 then
                      s_buffering_done <= '1';
                      s_buffer_full <= '1';
 
@@ -486,7 +542,6 @@ begin
                      request_record_wp <= request_record_wp + 1;
                   end if;
 
-                  buffering_data_counter <= buffering_data_counter + 1;
 
          end case;
       end if;
