@@ -42,6 +42,7 @@ signal interface_noc_state      : interface_noc;
 signal s_data_in    : regflit;
 signal s_data_out   : regflit;
 signal s_tx         : std_logic;
+signal s_rx         : std_logic;
 
 signal s_credit_out_analysis   : std_logic;
 
@@ -52,16 +53,6 @@ signal s_analysing_done      : std_logic;
 signal s_buffering_done      : std_logic;
 signal s_refusing_done       : std_logic;
 signal s_should_buffer       : std_logic;
-
--- Wishbone peripheral interface
-signal s_per_reset  : std_logic;
-signal s_address    : std_logic_vector(7 downto 0);
-signal s_data_i     : std_logic_vector(TAM_FLIT-1 downto 0);
-signal s_data_o     : std_logic_vector(TAM_FLIT-1 downto 0);
-signal s_write_en   : std_logic;
-signal s_stb        : std_logic;
-signal s_ack        : std_logic;
-signal s_cyc        : std_logic;
 
 signal header_flit_1 : std_logic_vector(TAM_FLIT-1 downto 0);
 signal header_flit_2 : std_logic_vector(TAM_FLIT-1 downto 0);
@@ -120,35 +111,60 @@ signal responding_done          : std_logic;
 signal receiving_counter        : integer;
 signal send_write_response      : std_logic;
 
+-- Wishbone peripheral interface
+signal s_per_reset  : std_logic;
+type wishbone_sender is (waiting, sending_write, sending_read, cooldown);
+signal wishbone_sender_state    : wishbone_sender;
+signal send_write               : std_logic;
+signal s_cyc                    : std_logic;
+signal s_stb                    : std_logic;
+signal s_data_o                   : std_logic_vector(TAM_FLIT-1 downto 0);
+
 begin
-
-   -- Signals to control the Wishbone peripheral
-   s_per_reset  <= '0';
-   s_address    <= (others => '0');
-   s_data_o     <= (others => '0');
-   s_write_en   <= '0';
-   s_stb        <= '0';
-   s_cyc        <= '0';
-
 
    -- Signals to control de Request Record CAM
    s_rrcam_clka <= clock;
    s_rrcam_clkb <= clock;
    s_rrcam_has_data <= '1' when request_record_wp > request_record_rp else '0';
 
-   process(reset, clock)
+   -- Send wishbone requests to the peripheral
+   per_reset <= reset or s_per_reset;
+
+   cyc <= s_cyc;
+   stb <= s_stb;
+   data_o <= s_data_o;
+
+   wishbone_sender_state <= waiting when s_per_reset = '1' else
+                              sending_write when wishbone_sender_state = waiting and internal_processing_state = receiving and send_write = '1' else
+                              cooldown when wishbone_sender_state = sending_write and send_write = '0' and ack = '1' else
+                              waiting when wishbone_sender_state = cooldown and s_cyc = '0' and s_stb = '0' else
+                              wishbone_sender_state;
+
+   wishbone_sender_fsm: process(reset, clock)
    begin
       if rising_edge(clock) then
-         per_reset <= s_per_reset;
-         address <= s_address;
-         s_data_i <= data_i;
-         data_o <= s_data_o;
-         write_en <= s_write_en;
-         stb <= s_stb;
-         s_ack <= ack;
-         cyc <= s_cyc;
+         case wishbone_sender_state is
+            when waiting =>
+               address    <= (others => '0');
+               s_data_o     <= (others => '0');
+               write_en   <= '0';
+               s_stb        <= '0';
+               s_cyc        <= '0';
+            when sending_write =>
+               if send_write = '1' then
+                  s_cyc <= '1';
+                  s_stb <= '1';
+                  write_en <= '1';
+                  s_data_o <= s_data_in;
+               end if;
+            when cooldown =>
+               s_cyc <= '0';
+               s_stb <= '0';
+               write_en <= '0';
+            when sending_read =>
+         end case;
       end if;
-   end process;
+   end process wishbone_sender_fsm;
 
    -- Send responses to the network
    response_sender_state <= waiting when reset = '1' else
@@ -269,6 +285,8 @@ begin
                   responding_done <= '0';
                   receiving_counter <= 0;
                   send_write_response <= '0';
+                  send_write <= '0';
+                  s_per_reset <= '0';
 
                   -- read the request from memory
                   if s_rrcam_has_data = '1'then
@@ -313,13 +331,22 @@ begin
                   discarding_counter <= discarding_counter + 1;
 
                when receiving =>
-                  -- TODO: send data to the peripheral
-                  if receiving_counter = packet_length - 3 then
-                     receiving_done <= '1';
-                     write_request_done <= '1';
-                  end if;
+                  -- send data to the peripheral
+                  if s_rx <= '1' then
+                     if receiving_counter = 0 then
+                        send_write <= '1';
+                     end if;
 
-                  receiving_counter <= receiving_counter + 1;
+                     if receiving_counter = packet_length - 2 then
+                        write_request_done <= '1';
+                        receiving_done <= '1';
+                        send_write <= '0';
+                     end if;
+
+                     receiving_counter <= receiving_counter + 1;
+                  else
+                     send_write <= '0';
+                  end if;
 
                when responding =>
                   send_write_response <= '1';
@@ -350,6 +377,7 @@ begin
    begin
       if rising_edge(clock) then
          s_data_in <= data_in;
+         s_rx <= rx;
       end if;
    end process;
 
@@ -469,25 +497,25 @@ begin
                   end if;
 
                when buffering =>
+                  --if s_rx = '1' then
+                     if buffering_data_counter = 2 then
+                        service_request_record.border_dir <= header_flit_1;
+                        service_request_record.source_pe <= s_data_in;
+                        service_request_record.task_id <= data_in;
 
-                  s_should_buffer <= '0';
-                  if buffering_data_counter = 2 then
-                     service_request_record.border_dir <= header_flit_1;
-                     service_request_record.source_pe <= s_data_in;
-                     service_request_record.task_id <= data_in;
+                     elsif buffering_data_counter = 3 then
+                        s_buffering_done <= '1';
+                        s_buffer_full <= '1';
 
-                  elsif buffering_data_counter = 3 then
-                     s_buffering_done <= '1';
-                     s_buffer_full <= '1';
+                        -- Save record into a memory
+                        s_rrcam_addra <= std_logic_vector(to_unsigned(request_record_wp, 8));
+                        s_rrcam_wea <= '1';
+                        s_rrcam_dina <= service_request_record;
+                        request_record_wp <= request_record_wp + 1;
+                     end if;
 
-                     -- Save record into a memory
-                     s_rrcam_addra <= std_logic_vector(to_unsigned(request_record_wp, 8));
-                     s_rrcam_wea <= '1';
-                     s_rrcam_dina <= service_request_record;
-                     request_record_wp <= request_record_wp + 1;
-                  end if;
-
-                  buffering_data_counter <= buffering_data_counter + 1;
+                     buffering_data_counter <= buffering_data_counter + 1;
+                  --end if;
 
          end case;
       end if;
