@@ -129,6 +129,7 @@ signal s_cyc                      : std_logic;
 signal s_stb                      : std_logic;
 signal s_data_o                   : std_logic_vector(TAM_FLIT-1 downto 0);
 signal peripheral_address         : std_logic_vector(7 downto 0);
+signal peripheral_address_read    : std_logic_vector(7 downto 0);
 
 begin
 
@@ -176,7 +177,7 @@ begin
                write_en <= '0';
             when sending_read =>
                if send_read_response = '1' then
-                  address <= peripheral_address;
+                  address <= peripheral_address_read;
                   s_cyc <= '1';
                   s_stb <= '1';
                   write_en <= '0';
@@ -209,7 +210,6 @@ begin
                   s_data_out <= (others => '0');
                   request_ack_sent <= '0';
                   send_response_counter <= 0;
-                  peripheral_address <= (others => '0');
 
                when sending_request_ack =>
 
@@ -286,16 +286,18 @@ begin
                   elsif credit_in = '1' and send_response_counter >= write_ack_pckt'length then
                      s_tx <= '1';
                      if ack = '1' then
-                        --packet_length <= to_integer(unsigned(header_flit_2(7 downto 0)));
-                        --std_logic_vector(to_unsigned(request_record_wp, 8));
-                        --peripheral_address <= std_logic_vector(to_unsigned(send_response_counter, 8));
                         s_data_out <= data_i;
-                        send_response_counter <= send_response_counter + 1;
                      end if;
+                  end if;
+
+                  if credit_in = '1' then
+                     send_response_counter <= send_response_counter + 1;
                   end if;
          end case;
       end if;
    end process;
+
+   peripheral_address_read <= std_logic_vector(to_unsigned(send_response_counter, 8)) when response_sender_state = sending_read_response else (others => '0');
 
    -- Read from requests memory
    internal_processing_state <= waiting when reset = '1' else
@@ -340,6 +342,7 @@ begin
                   processing_task_id <= (others => '0');
                   processing_size <= (others => '0');
                   s_credit_out_processing <= '1';
+                  peripheral_address <= (others => '0');
 
                   if discard_done = '0' then
                      waiting_write_request <= '0';
@@ -424,6 +427,7 @@ begin
                      end if;
 
                      receiving_counter <= receiving_counter + 1;
+                     peripheral_address <= std_logic_vector(to_unsigned(receiving_counter, 8));
                   else
                      send_write <= '0';
                   end if;
