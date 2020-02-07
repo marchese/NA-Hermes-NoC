@@ -5,6 +5,9 @@ use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 
 entity wb_256x2_bytes_memory is
+   generic(
+      LENGTH: integer := 256
+   );
    port(
       clock     : in  std_logic;
       reset     : in  std_logic;
@@ -22,7 +25,7 @@ end;
 
 architecture main of wb_256x2_bytes_memory is
 
-type t_buffer is array (0 to 255) of std_logic_vector(15 downto 0);
+type t_buffer is array (0 to LENGTH-1) of std_logic_vector(15 downto 0);
 signal buff : t_buffer := (others => (others => '0'));
 signal tmp_data : std_logic_vector(15 downto 0);
 signal s_ack_write : std_logic;

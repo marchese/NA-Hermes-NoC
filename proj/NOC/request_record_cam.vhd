@@ -7,6 +7,9 @@ use work.HermesPackage.all;
 -- Request Record CAM (RRCAM) is a Dual-Port Content Addressable Memory (CAM)
 -- that stores the request of the network interface
 entity request_record_cam is
+   generic(
+      LENGTH: integer := 256
+   );
    port (
       addra: in std_logic_vector(7 downto 0);
       addrb: in std_logic_vector(7 downto 0);
@@ -21,7 +24,7 @@ end request_record_cam;
 
 architecture request_cam_256 of request_record_cam is
 
-type SIMULATION_MEM_TYPE is array (0 to 255) of NI_SERVICE_REQUEST;
+type SIMULATION_MEM_TYPE is array (0 to LENGTH-1) of NI_SERVICE_REQUEST;
 signal mem : SIMULATION_MEM_TYPE;
 
 begin
