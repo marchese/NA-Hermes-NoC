@@ -128,8 +128,10 @@ signal send_write                 : std_logic;
 signal s_cyc                      : std_logic;
 signal s_stb                      : std_logic;
 signal s_data_o                   : std_logic_vector(TAM_FLIT-1 downto 0);
-signal peripheral_address         : std_logic_vector(7 downto 0);
+signal peripheral_address_write   : std_logic_vector(7 downto 0);
 signal peripheral_address_read    : std_logic_vector(7 downto 0);
+signal s_address                  : std_logic_vector(7 downto 0);
+signal send_read                  : std_logic;
 
 begin
 
@@ -147,9 +149,9 @@ begin
 
    wishbone_sender_state <= waiting when s_per_reset = '1' else
                               sending_write when wishbone_sender_state = waiting and internal_processing_state = receiving_from_noc_to_peripheral and send_write = '1' else
-                              sending_read when wishbone_sender_state = waiting and internal_processing_state = responding and send_read_response = '1' else
+                              sending_read when wishbone_sender_state = waiting and internal_processing_state = responding and send_read = '1' else
                               cooldown when wishbone_sender_state = sending_write and send_write = '0' and ack = '1' else
-                              cooldown when wishbone_sender_state = sending_read and send_read_response = '0' and ack = '1' else
+                              cooldown when wishbone_sender_state = sending_read and send_read = '0' and ack = '1' else
                               waiting when wishbone_sender_state = cooldown and s_cyc = '0' and s_stb = '0' else
                               wishbone_sender_state;
 
@@ -158,7 +160,6 @@ begin
       if rising_edge(clock) then
          case wishbone_sender_state is
             when waiting =>
-               address <= (others => '0');
                s_data_o <= (others => '0');
                write_en <= '0';
                s_stb <= '0';
@@ -169,15 +170,13 @@ begin
                   s_stb <= '1';
                   write_en <= '1';
                   s_data_o <= s_data_in;
-                  address <= peripheral_address;
                end if;
             when cooldown =>
                s_cyc <= '0';
                s_stb <= '0';
                write_en <= '0';
             when sending_read =>
-               if send_read_response = '1' then
-                  address <= peripheral_address_read;
+               if send_read = '1' then
                   s_cyc <= '1';
                   s_stb <= '1';
                   write_en <= '0';
@@ -185,6 +184,12 @@ begin
          end case;
       end if;
    end process wishbone_sender_fsm;
+
+   s_address <= peripheral_address_write when wishbone_sender_state = sending_write and send_write = '1' else
+              peripheral_address_read when wishbone_sender_state = sending_read and send_read = '1' else
+              s_address;
+
+   address <= s_address;
 
    -- Send responses to the network
    response_sender_state <= waiting when reset = '1' else
@@ -210,6 +215,7 @@ begin
                   s_data_out <= (others => '0');
                   request_ack_sent <= '0';
                   send_response_counter <= 0;
+                  send_read <= '0';
 
                when sending_request_ack =>
 
@@ -275,29 +281,39 @@ begin
                   write_ack_pckt(4) := current_request_processing.task_id;
                   write_ack_pckt(5) := x"0001";
 
-                  if credit_in = '1' and send_response_counter < write_ack_pckt'length then
-                     s_tx <= '1';
-                     s_data_out <= write_ack_pckt(send_response_counter);
-                     send_response_counter <= send_response_counter + 1;
-                  elsif credit_in = '1' and send_response_counter = processing_size + 6 then
-                     s_tx <= '0';
-                     s_data_out <= (others => '0');
-                     request_ack_sent <= '1';
-                  elsif credit_in = '1' and send_response_counter >= write_ack_pckt'length then
-                     s_tx <= '1';
-                     if ack = '1' then
-                        s_data_out <= data_i;
+                  if send_response_counter < write_ack_pckt'length then
+                     if credit_in = '1' then 
+                        s_tx <= '1';
+                        s_data_out <= write_ack_pckt(send_response_counter);
+                        send_response_counter <= send_response_counter + 1;
                      end if;
-                  end if;
-
-                  if credit_in = '1' then
-                     send_response_counter <= send_response_counter + 1;
+                  elsif send_response_counter - write_ack_pckt'length = processing_size then
+                     if credit_in = '1' then 
+                        s_tx <= '0';
+                        s_data_out <= (others => '0');
+                        request_ack_sent <= '1';
+                        send_read <= '0';
+                     end if;
+                  elsif send_response_counter >= write_ack_pckt'length then
+                     if credit_in = '1' then
+                        send_read <= '1';
+                        if ack = '1' then
+                           send_response_counter <= send_response_counter + 1;
+                           s_data_out <= data_i;
+                           s_tx <= '1';
+                        else
+                           s_tx <= '0';
+                        end if;
+                     else
+                        s_tx <= '0';
+                     end if;
                   end if;
          end case;
       end if;
    end process;
 
-   peripheral_address_read <= std_logic_vector(to_unsigned(send_response_counter, 8)) when response_sender_state = sending_read_response else (others => '0');
+   data_out <= data_i when response_sender_state = sending_read_response and credit_in = '1' and ack = '1' else s_data_out;
+   peripheral_address_read <= std_logic_vector(to_unsigned(send_response_counter - 6, 8)) when response_sender_state = sending_read_response and credit_in = '1' else peripheral_address_read;
 
    -- Read from requests memory
    internal_processing_state <= waiting when reset = '1' else
@@ -342,7 +358,7 @@ begin
                   processing_task_id <= (others => '0');
                   processing_size <= (others => '0');
                   s_credit_out_processing <= '1';
-                  peripheral_address <= (others => '0');
+                  peripheral_address_write <= (others => '0');
 
                   if discard_done = '0' then
                      waiting_write_request <= '0';
@@ -420,14 +436,17 @@ begin
                         send_write <= '1';
                      end if;
 
-                     if receiving_counter = packet_length - 3 then
+                     if receiving_counter = packet_length - 4 then
                         write_request_done <= '1';
                         receiving_done <= '1';
                         send_write <= '0';
                      end if;
 
-                     receiving_counter <= receiving_counter + 1;
-                     peripheral_address <= std_logic_vector(to_unsigned(receiving_counter, 8));
+                     if send_write = '1' then
+                        receiving_counter <= receiving_counter + 1;
+                     end if;
+
+                     peripheral_address_write <= std_logic_vector(to_unsigned(receiving_counter, 8));
                   else
                      send_write <= '0';
                   end if;
@@ -460,7 +479,6 @@ begin
                            interface_noc_state;
 
    credit_out <= s_credit_out_analysis and s_credit_out_processing;
-   data_out <= s_data_out;
    tx <= s_tx;
    packet_length <= to_integer(unsigned(header_flit_2(7 downto 0)));
 
