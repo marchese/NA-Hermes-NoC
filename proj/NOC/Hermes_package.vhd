@@ -82,16 +82,19 @@ package HermesPackage is
 -- NETWORK INTERFACE
 ---------------------------------------------------------
 
-   type NI_SERVICE_REQUEST is record
+   type ni_service_request is record
       task_id     : std_logic_vector(TAM_FLIT-1 downto 0);
       source_pe   : std_logic_vector(TAM_FLIT-1 downto 0);
       border_dir  : std_logic_vector(TAM_FLIT-1 downto 0);
-   end record NI_SERVICE_REQUEST; 
+      size        : std_logic_vector(TAM_FLIT-1 downto 0);
+   end record ni_service_request; 
 
    type service_request_packet is array (0 to 4) of std_logic_vector(TAM_FLIT-1 downto 0);
    type service_request_write_packet is array (0 to 10) of std_logic_vector(TAM_FLIT-1 downto 0);
    type service_request_read_packet is array (0 to 5) of std_logic_vector(TAM_FLIT-1 downto 0);
    type service_write_response_packet is array (0 to 5) of std_logic_vector(TAM_FLIT-1 downto 0);
+
+   constant read_response_header_size : integer := 6;
 
    constant service_request        : std_logic_vector(TAM_FLIT-1 downto 0) := x"1010";
    constant service_request_ack    : std_logic_vector(TAM_FLIT-1 downto 0) := x"1011";

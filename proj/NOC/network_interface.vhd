@@ -41,8 +41,6 @@ type interface_noc is (initializing, waiting, analysing, refusing, buffering);
 signal interface_noc_state      : interface_noc;
 
 signal write_data    : regflit;
-signal s_data_out   : regflit;
-signal s_tx         : std_logic;
 signal s_rx         : std_logic;
 
 signal s_credit_out_analysis   : std_logic;
@@ -88,7 +86,6 @@ type internal_processing is (waiting, accepting, analysing, discarding, receivin
 signal internal_processing_state  : internal_processing;
 
 signal current_request_analysis   : NI_SERVICE_REQUEST;
-signal current_request_processing : NI_SERVICE_REQUEST;
 signal s_rrcam_has_data           : std_logic;
 signal data_ready                 : std_logic;
 signal request_accepted           : std_logic;
@@ -98,7 +95,6 @@ signal analysing_counter          : integer;
 signal processing_source_pe       : std_logic_vector(TAM_FLIT-1 downto 0);
 signal processing_task_id         : std_logic_vector(TAM_FLIT-1 downto 0);
 signal processing_size            : std_logic_vector(TAM_FLIT-1 downto 0);
-signal send_response_counter      : integer;
 
 signal write_request_processing   : std_logic;
 signal read_request_processing    : std_logic;
@@ -106,11 +102,6 @@ signal write_request_done         : std_logic;
 signal read_request_done          : std_logic;
 signal nack_sent                  : std_logic;
 
-type response_sender is (waiting, sending_request_ack, sending_request_nack, sending_write_response, sending_read_response);
-signal response_sender_state      : response_sender;
-signal request_ack_sent           : std_logic;
-signal send_ack_request           : std_logic;
-signal send_nack_request          : std_logic;
 signal waiting_write_request      : std_logic;
 signal waiting_nack_sent          : std_logic;
 signal discard_done               : std_logic;
@@ -118,8 +109,6 @@ signal discarding_counter         : integer;
 signal receiving_done             : std_logic;
 signal responding_done            : std_logic;
 signal receiving_counter          : integer;
-signal send_write_response        : std_logic;
-signal send_read_response         : std_logic;
 
 -- Signals to control the peripheral interface
 signal send_write                 : std_logic;
@@ -127,142 +116,30 @@ signal send_read                  : std_logic;
 signal write_address              : std_logic_vector(7 downto 0);
 signal read_address               : std_logic_vector(7 downto 0);
 
+-- Signals to control the requests packaging module
+signal send_ack                   : std_logic;
+signal send_nack                  : std_logic;
+signal respond_read               : std_logic;
+signal send_read_per              : std_logic;
+signal data_i_per                 : std_logic_vector(TAM_FLIT-1 downto 0);
+signal ack_per                    : std_logic;
+signal respond_write              : std_logic;
+signal request_sent               : std_logic;
+signal request                    : ni_service_request;
+signal response_counter           : integer;
+
 begin
-
-   -- Send responses to the network
-   response_sender_state <= waiting when reset = '1' else
-                              sending_request_ack when response_sender_state = waiting and internal_processing_state = accepting and send_ack_request = '1' else
-                              sending_request_nack when response_sender_state = waiting and interface_noc_state = refusing and send_nack_request = '1' else
-                              sending_write_response when response_sender_state = waiting and internal_processing_state = responding and send_write_response = '1' else
-                              sending_read_response when response_sender_state = waiting and internal_processing_state = responding and send_read_response = '1' else
-                              waiting when response_sender_state = sending_request_ack and request_ack_sent = '1' else
-                              waiting when response_sender_state = sending_request_nack and request_ack_sent = '1' else
-                              waiting when response_sender_state = sending_write_response and request_ack_sent = '1' else
-                              waiting when response_sender_state = sending_read_response and request_ack_sent = '1' else
-                              response_sender_state;
-
-   response_sender_fsm: process(reset, clock)
-      variable req_pckt : service_request_packet;
-      variable write_ack_pckt : service_write_response_packet;
-   begin
-      if rising_edge(clock) then
-         case response_sender_state is
-
-               when waiting =>
-                  s_tx <= '0';
-                  s_data_out <= (others => '0');
-                  request_ack_sent <= '0';
-                  send_response_counter <= 0;
-                  send_read <= '0';
-
-               when sending_request_ack =>
-
-                  req_pckt(0) := x"0000";
-                  req_pckt(1) := x"0003";
-                  req_pckt(2) := service_request_ack;
-                  req_pckt(3) := x"FAFA";
-                  req_pckt(4) := current_request_processing.task_id;
-
-                  if credit_in = '1' and send_response_counter < req_pckt'length then
-                     s_tx <= '1';
-                     s_data_out <= req_pckt(send_response_counter);
-                     send_response_counter <= send_response_counter + 1;
-                  elsif credit_in = '1' and send_response_counter = req_pckt'length then
-                     s_tx <= '0';
-                     s_data_out <= (others => '0');
-                     request_ack_sent <= '1';
-                  end if;
-
-               when sending_request_nack =>
-
-                  req_pckt(0) := x"0000";
-                  req_pckt(1) := x"0003";
-                  req_pckt(2) := service_request_nack;
-                  req_pckt(3) := x"FAFA";
-                  req_pckt(4) := current_request_analysis.task_id;
-
-                  if credit_in = '1' and send_response_counter < req_pckt'length then
-                     s_tx <= '1';
-                     s_data_out <= req_pckt(send_response_counter);
-                     send_response_counter <= send_response_counter + 1;
-                  elsif credit_in = '1' and send_response_counter = req_pckt'length then
-                     s_tx <= '0';
-                     s_data_out <= (others => '0');
-                     request_ack_sent <= '1';
-                  end if;
-
-               when sending_write_response =>
-
-                  write_ack_pckt(0) := x"0000";
-                  write_ack_pckt(1) := x"0004";
-                  write_ack_pckt(2) := service_write_response;
-                  write_ack_pckt(3) := x"FAFA";
-                  write_ack_pckt(4) := current_request_processing.task_id;
-                  write_ack_pckt(5) := x"0001";
-
-                  if credit_in = '1' and send_response_counter < write_ack_pckt'length then
-                     s_tx <= '1';
-                     s_data_out <= write_ack_pckt(send_response_counter);
-                     send_response_counter <= send_response_counter + 1;
-                  elsif credit_in = '1' and send_response_counter = write_ack_pckt'length then
-                     s_tx <= '0';
-                     s_data_out <= (others => '0');
-                     request_ack_sent <= '1';
-                  end if;
-
-               when sending_read_response =>
-               -- Send read response
-                  write_ack_pckt(0) := x"0000";
-                  write_ack_pckt(1) := processing_size + 4;
-                  write_ack_pckt(2) := service_read_response;
-                  write_ack_pckt(3) := x"FAFA";
-                  write_ack_pckt(4) := current_request_processing.task_id;
-                  write_ack_pckt(5) := x"0001";
-
-                  if send_response_counter < write_ack_pckt'length then
-                     if credit_in = '1' then 
-                        s_tx <= '1';
-                        s_data_out <= write_ack_pckt(send_response_counter);
-                        send_response_counter <= send_response_counter + 1;
-                     end if;
-                  elsif send_response_counter - write_ack_pckt'length = processing_size then
-                     if credit_in = '1' then 
-                        s_tx <= '0';
-                        s_data_out <= (others => '0');
-                        request_ack_sent <= '1';
-                        send_read <= '0';
-                     end if;
-                  elsif send_response_counter >= write_ack_pckt'length then
-                     if credit_in = '1' then
-                        send_read <= '1';
-                        if ack = '1' then
-                           send_response_counter <= send_response_counter + 1;
-                           s_data_out <= data_i;
-                           s_tx <= '1';
-                        else
-                           s_tx <= '0';
-                        end if;
-                     else
-                        s_tx <= '0';
-                     end if;
-                  end if;
-         end case;
-      end if;
-   end process;
-
-   data_out <= data_i when response_sender_state = sending_read_response and credit_in = '1' and ack = '1' else s_data_out;
-   read_address <= std_logic_vector(to_unsigned(send_response_counter - 6, 8)) when response_sender_state = sending_read_response and credit_in = '1' else read_address;
 
    -- Read from requests memory
    internal_processing_state <= waiting when reset = '1' else
                                  accepting when internal_processing_state = waiting and data_ready = '1' else
-                                 analysing when internal_processing_state = accepting and request_accepted = '1' else
+                                 analysing when internal_processing_state = accepting and (write_request_processing = '1' or read_request_processing = '1') else
                                  discarding when internal_processing_state = analysing and request_approved = '0' and analysing_done = '1' else
                                  receiving_from_noc_to_peripheral when internal_processing_state = analysing and request_approved = '1' and analysing_done = '1' and is_read = '0' else
                                  waiting when internal_processing_state = discarding and discard_done = '1' else
                                  responding when internal_processing_state = receiving_from_noc_to_peripheral and receiving_done = '1' else
                                  responding when internal_processing_state = analysing and request_approved = '1' and analysing_done = '1' and is_read = '1' else
-                                 waiting when internal_processing_state = responding and request_ack_sent = '1' else
+                                 waiting when internal_processing_state = responding and request_sent = '1' else
                                  internal_processing_state;
 
    internal_processing_FSM: process(reset, clock)
@@ -273,21 +150,20 @@ begin
                when waiting =>
                   s_rrcam_enb <= '0';
                   s_rrcam_addrb <= (others => '0');
-                  current_request_processing <= ((others => '0'), (others => '0'), (others => '0'));
+                  request <= ((others => '0'), (others => '0'), (others => '0'), (others => '0'));
                   data_ready <= '0';
-                  request_accepted <= '0';
                   request_approved <= '0';
                   analysing_done <= '0';
                   write_request_done <= '0';
                   nack_sent <= '0';
-                  send_ack_request <= '0';
+                  send_ack <= '0';
                   discard_done <= '0';
                   discarding_counter <= 0;
                   receiving_done <= '0';
                   responding_done <= '0';
                   receiving_counter <= 0;
-                  send_write_response <= '0';
-                  send_read_response <= '0';
+                  respond_write <= '0';
+                  respond_read <= '0';
                   send_write <= '0';
                   is_read <= '0';
                   analysing_counter <= 0;
@@ -302,7 +178,7 @@ begin
                   end if;
 
                   -- increments the read pointer when comming from responding state so the operation won't be retrieved again from the records memory
-                  if request_ack_sent = '1' and responding_done = '1' then
+                  if request_sent = '1' and responding_done = '1' then
                      request_record_rp <= request_record_rp + 1;
                   elsif s_rrcam_has_data = '1'then
                      -- read the request from memory
@@ -315,21 +191,18 @@ begin
 
                   if data_ready = '1' then
                      data_ready <= '0';
-                     current_request_processing <= s_rrcam_doutb;
+                     request <= s_rrcam_doutb;
                   end if;
 
                   if data_ready = '0' and waiting_write_request = '0' then
                      -- After reading the request from memory sends an ack message in order to accept it
-                     send_ack_request <= '1';
+                     send_ack <= '1';
                      waiting_write_request <= '1';
-                  else
-                     send_ack_request <= '0';
                   end if;
 
                   -- TODO: Implement a time-out mechanism in case where the write request message is never sent to the NI
-                  if (write_request_processing = '1' or read_request_processing = '1') and waiting_write_request = '1' then
-                     request_accepted <= '1';
-                     processing_source_pe <= data_in;
+                  if waiting_write_request = '1' then
+                     send_ack <= '0';
                   end if;
 
                when analysing =>
@@ -337,16 +210,19 @@ begin
                   is_read <= read_request_processing;
                   
                   if analysing_counter = 0 and rx = '1' then
-                     processing_task_id <= data_in;
+                     processing_source_pe <= data_in;
                   elsif analysing_counter = 1 and rx = '1' then
+                     processing_task_id <= data_in;
+                  elsif analysing_counter = 2 and rx = '1' then
                      processing_size <= data_in;
                      s_credit_out_processing <= '0';
-                  elsif analysing_counter = 2 then
+                  elsif analysing_counter = 3 then
                      -- take a decision if this is an authorized request
                      s_credit_out_processing <= '1';
                      analysing_done <= '1';
-                     if processing_task_id = current_request_processing.task_id then
+                     if processing_task_id = request.task_id then
                         request_approved <= '1';
+                        request.size <= processing_size;
                      else
                         waiting_write_request <= '1';
                         request_approved <= '0';
@@ -389,12 +265,17 @@ begin
                   end if;
 
                when responding =>
-                  if is_read = '0' then
-                     send_write_response <= '1';
+                  if responding_done = '0' then
+                     responding_done <= '1';
+                     if is_read = '0' then
+                        respond_write <= '1';
+                     else
+                        respond_read <= '1';
+                     end if;
                   else
-                     send_read_response <= '1';
+                     respond_write <= '0';
+                     respond_read <= '0';
                   end if;
-                  responding_done <= '1';
 
                when working =>
                when terminating =>
@@ -407,8 +288,7 @@ begin
                            waiting      when interface_noc_state = initializing and s_initialization_done = '1' else
                            analysing    when interface_noc_state = waiting and s_has_message = '1' else
                            waiting      when interface_noc_state = analysing and write_request_done = '1' else
-                           waiting      when interface_noc_state = analysing and response_sender_state = sending_read_response and request_ack_sent = '1' else
-                           waiting      when interface_noc_state = analysing and read_request_done = '1' else
+                           waiting      when interface_noc_state = analysing and read_request_processing = '1' and request_sent = '1' else
                            refusing     when interface_noc_state = analysing and s_analysing_done = '1' and s_should_buffer = '0' else
                            buffering    when interface_noc_state = analysing and s_analysing_done = '1' and s_should_buffer = '1' else
                            waiting      when interface_noc_state = buffering and s_buffering_done = '1' else
@@ -416,7 +296,6 @@ begin
                            interface_noc_state;
 
    credit_out <= s_credit_out_analysis and s_credit_out_processing;
-   tx <= s_tx;
    packet_length <= to_integer(unsigned(header_flit_2(7 downto 0)));
 
    process(reset, clock)
@@ -464,8 +343,8 @@ begin
                   s_analysing_done <= '0';
                   s_rrcam_addra <= (others => '0');
                   s_rrcam_wea <= '0';
-                  s_rrcam_dina <= ((others => '0'), (others => '0'), (others => '0'));
-                  send_nack_request <= '0';
+                  s_rrcam_dina <= ((others => '0'), (others => '0'), (others => '0'), (others => '0'));
+                  send_nack <= '0';
                   waiting_nack_sent <= '0';
                   write_request_processing <= '0';
                   read_request_processing <= '0';
@@ -500,21 +379,27 @@ begin
                            s_analysing_done <= '1';
 
                      elsif header_flit_3 = service_request_write then
+                           s_should_buffer <= '0';
+
                            -- Activate the "Processing" state machine to process the input from the network and write to the peripheral
-                           if internal_processing_state = accepting then
-                              write_request_processing <= '1';
-                           elsif write_request_processing = '0' then
-                              s_should_buffer <= '0';
-                              s_analysing_done <= '1';
+                           if write_request_processing = '0' then
+                              if internal_processing_state = accepting then
+                                 write_request_processing <= '1';
+                              else
+                                 s_analysing_done <= '1';
+                              end if;
                            end if;
 
                      elsif header_flit_3 = service_request_read then
+                           s_should_buffer <= '0';
+
                            -- Activate the "Processing" state machine to read from the peripheral and send the response to the network
-                           if internal_processing_state = accepting then
-                              read_request_processing <= '1';
-                           elsif read_request_processing = '0' then
-                              s_should_buffer <= '0';
-                              s_analysing_done <= '1';
+                           if read_request_processing = '0' then
+                              if internal_processing_state = accepting then
+                                 read_request_processing <= '1';
+                              else
+                                 s_analysing_done <= '1';
+                              end if;
                            end if;
 
                      else
@@ -540,7 +425,7 @@ begin
                   if header_flit_3 = service_request then
                      if refusing_data_counter = 1 and rx = '1' then
                            -- Activate the "Processing" state machine to send a REQUEST_NACK back to the network
-                           send_nack_request <= '1';
+                           send_nack <= '1';
                            current_request_analysis.task_id <= data_in;
                            waiting_nack_sent <= '1';
                      end if;
@@ -557,8 +442,8 @@ begin
                   end if;
 
                   if waiting_nack_sent = '1' then
-                     send_nack_request <= '0';
-                     if request_ack_sent = '1' then
+                     send_nack <= '0';
+                     if request_sent = '1' then
                         s_refusing_done <= '1';
                      end if;
                   end if;
@@ -634,5 +519,36 @@ begin
       cyc,
       stall
    );
+
+
+   -- This module is responsible for packaging the responses and sending them to the NoC
+   requests_packaging : entity work.requests_packaging
+   port map(
+      clock,
+      reset,
+      send_ack,
+      send_nack,
+      respond_read,
+      send_read_per,
+      data_i_per,
+      ack_per,
+      respond_write,
+      request_sent,
+      request,
+      response_counter,
+      tx,
+      credit_in,
+      data_out
+   );
+
+   -- TODO: send_read_per signals the peripheral interface to read data. Check if this signal can be removed because the Request Packaging shouldnt know the peripheral at all.
+   send_read <= send_read_per;
+   data_i_per <= data_i;
+   ack_per <= ack;
+
+   -- TODO: The response counter is converted in peripheral read address while we dont have it being set externally by the requester 
+   read_address <= (others => '0') when reset = '1' else
+                   std_logic_vector(to_unsigned(response_counter - read_response_header_size, 8)) when send_read_per = '1' and credit_in = '1' else
+                   read_address;
 
 end architecture main;

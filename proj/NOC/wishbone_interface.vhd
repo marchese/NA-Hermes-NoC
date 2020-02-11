@@ -16,17 +16,17 @@ entity wishbone_interface is
       clock        : in std_logic;
       reset        : in std_logic;
 
-      -- Interface control bus
+      -- Control bus
       send_write    : in std_logic;
       send_read     : in std_logic;
       write_address : in std_logic_vector(ADDR_LENGTH-1 downto 0);
       read_address  : in std_logic_vector(ADDR_LENGTH-1 downto 0);
       write_data    : in std_logic_vector(DATA_LENGTH-1 downto 0);
 
-      -- Wishbone protocol bus
+      -- Protocol bus
       per_clock    : out std_logic;
       per_reset    : out std_logic;
-      address      : out std_logic_vector(7 downto 0);
+      address      : out std_logic_vector(ADDR_LENGTH-1 downto 0);
       data_i       : in  std_logic_vector(DATA_LENGTH-1 downto 0);
       data_o       : out std_logic_vector(DATA_LENGTH-1 downto 0);
       write_en     : out std_logic;
@@ -91,7 +91,8 @@ begin
    cyc <= s_cyc;
    stb <= s_stb;
 
-   s_address <= write_address when wb_fsm_state = sending_write and send_write = '1' else
+   s_address <= (others => '0') when reset = '1'else
+               write_address when wb_fsm_state = sending_write and send_write = '1' else
                read_address when wb_fsm_state = sending_read and send_read = '1' else
                s_address;
 
