@@ -22,6 +22,7 @@ entity network_interface is
         data_out     : out regflit;
 
         -- Wishbone peripheral interface
+        per_clock    : out std_logic;
         per_reset    : out std_logic;
         address      : out std_logic_vector(7 downto 0);
         data_i       : in  std_logic_vector(TAM_FLIT-1 downto 0);
@@ -34,12 +35,12 @@ entity network_interface is
     );
 end;
 
-architecture wishbone of network_interface is
+architecture main of network_interface is
 
 type interface_noc is (initializing, waiting, analysing, refusing, buffering);
 signal interface_noc_state      : interface_noc;
 
-signal s_data_in    : regflit;
+signal write_data    : regflit;
 signal s_data_out   : regflit;
 signal s_tx         : std_logic;
 signal s_rx         : std_logic;
@@ -120,76 +121,13 @@ signal receiving_counter          : integer;
 signal send_write_response        : std_logic;
 signal send_read_response         : std_logic;
 
--- Wishbone peripheral interface
-signal s_per_reset  : std_logic;
-type wishbone_sender is (waiting, sending_write, sending_read, cooldown);
-signal wishbone_sender_state      : wishbone_sender;
+-- Signals to control the peripheral interface
 signal send_write                 : std_logic;
-signal s_cyc                      : std_logic;
-signal s_stb                      : std_logic;
-signal s_data_o                   : std_logic_vector(TAM_FLIT-1 downto 0);
-signal peripheral_address_write   : std_logic_vector(7 downto 0);
-signal peripheral_address_read    : std_logic_vector(7 downto 0);
-signal s_address                  : std_logic_vector(7 downto 0);
 signal send_read                  : std_logic;
+signal write_address              : std_logic_vector(7 downto 0);
+signal read_address               : std_logic_vector(7 downto 0);
 
 begin
-
-   -- Signals to control de Request Record CAM
-   s_rrcam_clka <= clock;
-   s_rrcam_clkb <= clock;
-   s_rrcam_has_data <= '1' when request_record_wp > request_record_rp else '0';
-
-   -- Send wishbone requests to the peripheral
-   per_reset <= reset or s_per_reset;
-
-   cyc <= s_cyc;
-   stb <= s_stb;
-   data_o <= s_data_o when wishbone_sender_state = sending_write else (others => '0');
-
-   wishbone_sender_state <= waiting when s_per_reset = '1' else
-                              sending_write when wishbone_sender_state = waiting and internal_processing_state = receiving_from_noc_to_peripheral and send_write = '1' else
-                              sending_read when wishbone_sender_state = waiting and internal_processing_state = responding and send_read = '1' else
-                              cooldown when wishbone_sender_state = sending_write and send_write = '0' and ack = '1' else
-                              cooldown when wishbone_sender_state = sending_read and send_read = '0' and ack = '1' else
-                              waiting when wishbone_sender_state = cooldown and s_cyc = '0' and s_stb = '0' else
-                              wishbone_sender_state;
-
-   wishbone_sender_fsm: process(reset, clock)
-   begin
-      if rising_edge(clock) then
-         case wishbone_sender_state is
-            when waiting =>
-               s_data_o <= (others => '0');
-               write_en <= '0';
-               s_stb <= '0';
-               s_cyc <= '0';
-            when sending_write =>
-               if send_write = '1' then
-                  s_cyc <= '1';
-                  s_stb <= '1';
-                  write_en <= '1';
-                  s_data_o <= s_data_in;
-               end if;
-            when cooldown =>
-               s_cyc <= '0';
-               s_stb <= '0';
-               write_en <= '0';
-            when sending_read =>
-               if send_read = '1' then
-                  s_cyc <= '1';
-                  s_stb <= '1';
-                  write_en <= '0';
-               end if;
-         end case;
-      end if;
-   end process wishbone_sender_fsm;
-
-   s_address <= peripheral_address_write when wishbone_sender_state = sending_write and send_write = '1' else
-              peripheral_address_read when wishbone_sender_state = sending_read and send_read = '1' else
-              s_address;
-
-   address <= s_address;
 
    -- Send responses to the network
    response_sender_state <= waiting when reset = '1' else
@@ -313,7 +251,7 @@ begin
    end process;
 
    data_out <= data_i when response_sender_state = sending_read_response and credit_in = '1' and ack = '1' else s_data_out;
-   peripheral_address_read <= std_logic_vector(to_unsigned(send_response_counter - 6, 8)) when response_sender_state = sending_read_response and credit_in = '1' else peripheral_address_read;
+   read_address <= std_logic_vector(to_unsigned(send_response_counter - 6, 8)) when response_sender_state = sending_read_response and credit_in = '1' else read_address;
 
    -- Read from requests memory
    internal_processing_state <= waiting when reset = '1' else
@@ -351,14 +289,13 @@ begin
                   send_write_response <= '0';
                   send_read_response <= '0';
                   send_write <= '0';
-                  s_per_reset <= '0';
                   is_read <= '0';
                   analysing_counter <= 0;
                   processing_source_pe <= (others => '0');
                   processing_task_id <= (others => '0');
                   processing_size <= (others => '0');
                   s_credit_out_processing <= '1';
-                  peripheral_address_write <= (others => '0');
+                  write_address <= (others => '0');
 
                   if discard_done = '0' then
                      waiting_write_request <= '0';
@@ -446,7 +383,7 @@ begin
                         receiving_counter <= receiving_counter + 1;
                      end if;
 
-                     peripheral_address_write <= std_logic_vector(to_unsigned(receiving_counter, 8));
+                     write_address <= std_logic_vector(to_unsigned(receiving_counter, 8));
                   else
                      send_write <= '0';
                   end if;
@@ -485,7 +422,7 @@ begin
    process(reset, clock)
    begin
       if rising_edge(clock) then
-         s_data_in <= data_in;
+         write_data <= data_in;
          s_rx <= rx;
       end if;
    end process;
@@ -518,7 +455,7 @@ begin
                   if rx = '1' then
                      s_has_message <= '1';
                      -- Save the first flit (target, i/o border)
-                     header_flit_1 <= s_data_in;
+                     header_flit_1 <= write_data;
                   end if;
 
                   -- clear internal signals
@@ -657,6 +594,7 @@ begin
       end if;
    end process;
 
+   -- Interface with the RRCAM, the memory that stores the requests
    request_record_cam : entity work.request_record_cam
    port map(
       addra   =>  s_rrcam_addra,
@@ -669,4 +607,32 @@ begin
       wea     =>  s_rrcam_wea
    );
 
-end architecture;
+   -- Signals to control the RRCAM - Request Record CAM
+   s_rrcam_clka <= clock;
+   s_rrcam_clkb <= clock;
+   s_rrcam_has_data <= '1' when request_record_wp > request_record_rp else '0';
+
+
+   -- Interface with the wishbone peripheral
+   wishbone_interface : entity work.wishbone_interface
+   port map(
+      clock,
+      reset,
+      send_write,
+      send_read,
+      write_address,
+      read_address,
+      write_data,
+      per_clock,
+      per_reset,
+      address,
+      data_i,
+      data_o,
+      write_en,
+      stb,
+      ack,
+      cyc,
+      stall
+   );
+
+end architecture main;
