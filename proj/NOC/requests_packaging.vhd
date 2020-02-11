@@ -20,6 +20,7 @@ entity requests_packaging is
       -- Control bus
       send_ack         : in  std_logic;
       send_nack        : in  std_logic;
+      nack_task_id     : in  std_logic_vector(DATA_LENGTH-1 downto 0);
       respond_read     : in  std_logic;
       send_read_per    : out std_logic;
       data_i_per       : in  std_logic_vector(DATA_LENGTH-1 downto 0);
@@ -107,7 +108,7 @@ begin
                   req_pckt(1) := x"0003";
                   req_pckt(2) := service_request_nack;
                   req_pckt(3) := x"FAFA";
-                  req_pckt(4) := request.task_id;
+                  req_pckt(4) := nack_task_id;
 
                   if credit_in = '1' and send_response_counter < req_pckt'length then
                      s_tx <= '1';

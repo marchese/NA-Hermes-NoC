@@ -85,7 +85,6 @@ signal request_record_rp          : integer := 0;
 type internal_processing is (waiting, accepting, analysing, discarding, receiving_from_noc_to_peripheral, responding, working, terminating);
 signal internal_processing_state  : internal_processing;
 
-signal current_request_analysis   : NI_SERVICE_REQUEST;
 signal s_rrcam_has_data           : std_logic;
 signal data_ready                 : std_logic;
 signal request_accepted           : std_logic;
@@ -95,6 +94,7 @@ signal analysing_counter          : integer;
 signal processing_source_pe       : std_logic_vector(TAM_FLIT-1 downto 0);
 signal processing_task_id         : std_logic_vector(TAM_FLIT-1 downto 0);
 signal processing_size            : std_logic_vector(TAM_FLIT-1 downto 0);
+signal nack_task_id               : std_logic_vector(TAM_FLIT-1 downto 0);
 
 signal write_request_processing   : std_logic;
 signal read_request_processing    : std_logic;
@@ -348,7 +348,7 @@ begin
                   waiting_nack_sent <= '0';
                   write_request_processing <= '0';
                   read_request_processing <= '0';
-                  current_request_analysis.task_id <= (others => '0');
+                  nack_task_id <= (others => '0');
 
                when analysing =>
                   if buffering_header_counter = 0 then
@@ -426,7 +426,7 @@ begin
                      if refusing_data_counter = 1 and rx = '1' then
                            -- Activate the "Processing" state machine to send a REQUEST_NACK back to the network
                            send_nack <= '1';
-                           current_request_analysis.task_id <= data_in;
+                           nack_task_id <= data_in;
                            waiting_nack_sent <= '1';
                      end if;
                   else
@@ -463,9 +463,7 @@ begin
 
                   if buffering_data_counter = 2 then
                      s_buffering_done <= '1';
-                     if request_record_wp + 2 = request_record_rp + 1 then
-                        s_buffer_full <= '1';
-                     end if;
+                     --s_buffer_full <= '1'; -- for testing purposes
 
                      -- Save record into a memory
                      s_rrcam_addra <= std_logic_vector(to_unsigned(request_record_wp, 8));
@@ -528,6 +526,7 @@ begin
       reset,
       send_ack,
       send_nack,
+      nack_task_id,
       respond_read,
       send_read_per,
       data_i_per,
