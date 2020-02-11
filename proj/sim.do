@@ -9,6 +9,8 @@ vcom -work work -93 -explicit NOC/Hermes_switchcontrol.vhd
 vcom -work work -93 -explicit NOC/Hermes_crossbar.vhd
 vcom -work work -93 -explicit NOC/RouterCC.vhd
 vcom -work work -93 -explicit NOC/request_record_cam.vhd
+vcom -work work -93 -explicit NOC/requests_packaging.vhd
+vcom -work work -93 -explicit NOC/wishbone_interface.vhd
 vcom -work work -93 -explicit NOC/network_interface.vhd
 vcom -work work -93 -explicit Peripherals/wb_256x2_bytes_memory.vhd
 vcom -work work -93 -explicit NOC/NOC.vhd

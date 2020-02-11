@@ -149,6 +149,7 @@ architecture NOC of NOC is
 
    type router_position is array (NB_ROUTERS-1 downto 0) of integer range 0 to TR;
 
+   signal wb_clock    : std_logic;
    signal wb_reset    : std_logic;
    signal wb_address  : std_logic_vector(7 downto 0);
    signal wb_data_i   : std_logic_vector(TAM_FLIT-1 downto 0);
@@ -283,6 +284,7 @@ begin
       data_in => data_out(N0202)(NORTH),
       data_out => data_in(N0202)(NORTH),
 
+      per_clock => wb_clock,
       per_reset => wb_reset,
       address => wb_address,
       data_i => wb_data_i,
@@ -296,7 +298,7 @@ begin
 
    wb_memory : entity work.wb_256x2_bytes_memory
    port map(
-      clock => clock(N0202),
+      clock => wb_clock,
       reset => wb_reset,
       adr_i => wb_address,
       dat_i => wb_data_o,
