@@ -5,6 +5,7 @@ add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/load_k
 add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/k
 add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/total_bytes
 add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/m
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/m_valid
 add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/block_counter
 add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/current_count
 add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/b

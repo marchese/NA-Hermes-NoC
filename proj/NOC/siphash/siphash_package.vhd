@@ -41,7 +41,8 @@ package siphash_package is
     load_k : in std_logic;
 
     init_ready, hash_ready : buffer std_logic;
-    hash                   : out    std_logic_vector(HASH_WIDTH-1 downto 0)
+    hash                   : out    std_logic_vector(HASH_WIDTH-1 downto 0);
+    m_valid: in std_logic
     );
   end component;
 

@@ -22,6 +22,7 @@ architecture testbench of tb_siphash is
   signal load_k :  std_logic := '0';
 
   signal init_ready, hash_ready : std_logic;
+  signal m_valid : std_logic := '0';
   signal hash : std_logic_vector(HASH_WIDTH-1 downto 0);
   signal counter : integer := 0;
   signal test_finished : boolean := false;
@@ -34,7 +35,7 @@ begin
   m <= key_m when load_k = '1' else blk_m;
 
   hash_core: siphash
-    port map(m, b, rst_n, clk, init, load_k, init_ready, hash_ready, hash);
+    port map(m, b, rst_n, clk, init, load_k, init_ready, hash_ready, hash, m_valid);
 
   reset: process
   begin
@@ -102,7 +103,8 @@ begin
     file test_vector : text open read_mode is "test_vector";
   begin
     wait until load_k = '0';
-    for i in 0 to 63 loop
+    --for i in 0 to 63 loop
+      i := 8;
       init <= '1';
       for blocks in 0 to i/8 loop
         if (blocks+1) * 8 < i then
@@ -110,17 +112,26 @@ begin
         else
           bytes := i-(blocks*8);
         end if;
+
+        --invalid data starts
+        --blk_m <= (others => '1');
+        --m_valid <= '0';
+        --wait until clk = '1';
+        --invalid data ends
+
         b <= std_logic_vector(to_unsigned(bytes,BYTES_WIDTH));
         blk_m <= (others => '0');
         for count in 0 to bytes-1 loop
           blk_m(count*8+7 downto count*8) <=
             std_logic_vector(to_unsigned(count+blocks*8,8));
         end loop;
+        m_valid <= '1';
         wait until clk = '1';
         init <= '0';
       end loop;
       blk_m <= (others => '1');
       b <= "0000";
+      m_valid <= '0';
       wait until hash_ready = '1';
       readline(test_vector, l);
       hread(l, real_hash);
@@ -128,7 +139,7 @@ begin
         "test vector failed for " & integer'image(i) & " bytes"
         severity error;
       success := hash = real_hash and success;
-    end loop;
+    --end loop;
     test_finished <= true;
     if success then
       write (l, String'("test vector ok"));

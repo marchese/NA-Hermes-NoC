@@ -16,7 +16,8 @@ entity siphash is
     load_k : in std_logic;
 
     init_ready, hash_ready : buffer std_logic;
-    hash                   : out    std_logic_vector(HASH_WIDTH-1 downto 0)
+    hash                   : out    std_logic_vector(HASH_WIDTH-1 downto 0);
+    m_valid: in std_logic
     );
 end entity;
 
@@ -46,8 +47,9 @@ begin
 
   total_bytes <= std_logic_vector(current_count) & b(BYTES_WIDTH-2 downto 0);
 
-  this_m <= m when b(BYTES_WIDTH-1) = '1' else
-            total_bytes & m(BLOCK_WIDTH-LENGTH_WIDTH-1 downto 0);
+  this_m <= m when b(BYTES_WIDTH-1) = '1' and m_valid = '1' else
+            total_bytes & m(BLOCK_WIDTH-LENGTH_WIDTH-1 downto 0) when m_valid = '1' else
+            this_m;
 
   process(rst_n, clk)
   begin
@@ -79,15 +81,24 @@ begin
 
     elsif rising_edge(clk) then
 
-      last_m        <= this_m;
-      block_counter <= current_count + 1;
+      if m_valid = '1' then
+        last_m        <= this_m;
+        block_counter <= current_count + 1;
+      end if;
       init_ready    <= '0';
       hash_ready    <= '0';
 
-      v0(0) <= v0(c);
-      v1(0) <= v1(c);
-      v2(0) <= v2(c);
-      v3(0) <= v3(c);
+      if state = compression and m_valid = '0' then
+        v0(0) <= v0(0);
+        v1(0) <= v1(0);
+        v2(0) <= v2(0);
+        v3(0) <= v3(0);
+      else
+        v0(0) <= v0(c);
+        v1(0) <= v1(c);
+        v2(0) <= v2(c);
+        v3(0) <= v3(c);
+      end if;
 
       case state is
 
@@ -98,8 +109,10 @@ begin
 
         when compression =>
 
-          v0(0) <= v0(c) xor last_m;
-          v3(0) <= v3(c) xor this_m;
+          if m_valid = '1' then
+            v0(0) <= v0(c) xor last_m;
+            v3(0) <= v3(c) xor this_m;
+          end if;
 
         when last_block =>
 
@@ -134,10 +147,14 @@ begin
       state <= idle;
     elsif rising_edge(clk) then
       if init = '1' or state = compression then
-        if b(BYTES_WIDTH-1) = '1' then
-          state <= compression;
+        if m_valid = '1' then
+          if b(BYTES_WIDTH-1) = '1' then
+            state <= compression;
+          else
+            state <= last_block;
+          end if;
         else
-          state <= last_block;
+          state <= state;
         end if;
       elsif state = last_block then
         state <= finalization;
