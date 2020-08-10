@@ -2,3 +2,8 @@ proj/modelsim.ini
 proj/work
 proj/transcript
 proj/vsim.wlf
+
+proj/NOC/siphash/modelsim.ini
+proj/NOC/siphash/work
+proj/NOC/siphash/transcript
+proj/NOC/siphash/vsim.wlf

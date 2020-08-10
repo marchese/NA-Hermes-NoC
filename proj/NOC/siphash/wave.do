@@ -11,6 +11,7 @@ add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/current_coun
 add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/b
 add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/this_m
 add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/last_m
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/init
 add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/init_ready
 add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/hash_ready
 add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/hash

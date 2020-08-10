@@ -1,4 +1,5 @@
 add wave -position end -group NetworkInterface sim:/topnoc/noc1/network_interface/*
+add wave -position end -radix hexadecimal -group siphash sim:/topnoc/noc1/network_interface/siphash/*
 add wave -position end -group WishboneInterface sim:/topnoc/noc1/network_interface/wishbone_interface/*
 add wave -position end -group RequestsPackaging sim:/topnoc/noc1/network_interface/requests_packaging/*
 add wave -position end -group Peripheral sim:/topnoc/noc1/wb_memory/*

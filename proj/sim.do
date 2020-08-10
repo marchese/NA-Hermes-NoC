@@ -11,6 +11,9 @@ vcom -work work -93 -explicit NOC/RouterCC.vhd
 vcom -work work -93 -explicit NOC/request_record_cam.vhd
 vcom -work work -93 -explicit NOC/requests_packaging.vhd
 vcom -work work -93 -explicit NOC/wishbone_interface.vhd
+vcom -work work -93 -explicit NOC/siphash/siphash_package.vhd
+vcom -work work -93 -explicit NOC/siphash/sipround.vhd
+vcom -work work -93 -explicit NOC/siphash/siphash.vhd
 vcom -work work -93 -explicit NOC/network_interface.vhd
 vcom -work work -93 -explicit Peripherals/wb_256x2_bytes_memory.vhd
 vcom -work work -93 -explicit NOC/NOC.vhd
@@ -21,7 +24,7 @@ vsim -novopt -t 10ps work.topNoC
 set StdArithNoWarnings 1
 set StdVitalGlitchNoWarnings 1
 
-do wave.do 
+do wave.do
 
 run 6 us
 

@@ -7,6 +7,7 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 use work.HermesPackage.all;
+use work.siphash_package.all;
 
 entity network_interface is
     port(
@@ -128,7 +129,42 @@ signal request_sent               : std_logic;
 signal request                    : ni_service_request;
 signal response_counter           : integer;
 
+signal m_hash                     : std_logic_vector (BLOCK_WIDTH-1 downto 0);
+signal m_valid_hash               : std_logic;
+signal b_hash                     : std_logic_vector (BYTES_WIDTH-1 downto 0);
+signal init_hash                  : std_logic;
+signal load_hash_k                : std_logic;
+signal init_hash_ready            : std_logic;
+signal hash_ready                 : std_logic;
+signal hash                       : std_logic_vector(HASH_WIDTH-1 downto 0);
+signal siphash_reset              : std_logic;
+
 begin
+
+   siphash_control: process(reset, clock)
+   begin
+      if rising_edge(clock) then
+         if internal_processing_state = analysing and analysing_counter = 0 then
+            load_hash_k <= '1';
+            m_hash <= x"0706050403020100";
+         elsif internal_processing_state = analysing and analysing_counter = 1 then
+            m_hash <= x"0F0E0D0C0B0A0908";
+            load_hash_k <= '1';
+         elsif internal_processing_state = analysing and analysing_counter = 2 then
+            init_hash <= '1';
+            load_hash_k <= '0';
+            b_hash <= x"8";
+            m_hash <= x"0706050403020100";
+            m_valid_hash <= '1';-- RX
+         elsif internal_processing_state = analysing and analysing_counter = 3 then
+            init_hash <= '0';
+            m_hash <= (others => '0');
+            b_hash <= x"0";
+         else
+            m_valid_hash <= '0';
+         end if;
+      end if;
+   end process siphash_control;
 
    -- Read from requests memory
    internal_processing_state <= waiting when reset = '1' else
@@ -208,7 +244,7 @@ begin
                when analysing =>
                   -- TODO: Security check using criptography keys in the future
                   is_read <= read_request_processing;
-                  
+
                   if analysing_counter = 0 and rx = '1' then
                      processing_source_pe <= data_in;
                   elsif analysing_counter = 1 and rx = '1' then
@@ -545,9 +581,25 @@ begin
    data_i_per <= data_i;
    ack_per <= ack;
 
-   -- TODO: The response counter is converted in peripheral read address while we dont have it being set externally by the requester 
+   -- TODO: The response counter is converted in peripheral read address while we dont have it being set externally by the requester
    read_address <= (others => '0') when reset = '1' else
                    std_logic_vector(to_unsigned(response_counter - read_response_header_size, 8)) when send_read_per = '1' and credit_in = '1' else
                    read_address;
+
+   siphash_reset <= not reset;
+
+   siphash : entity work.siphash
+   port map(
+      m => m_hash,
+      b => b_hash,
+      rst_n => siphash_reset,
+      clk => clock,
+      init => init_hash,
+      load_k => load_hash_k,
+      init_ready => init_hash_ready,
+      hash_ready => hash_ready,
+      hash => hash,
+      m_valid => m_valid_hash
+   );
 
 end architecture main;
