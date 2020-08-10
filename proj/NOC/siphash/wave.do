@@ -1,0 +1,19 @@
+add wave -position end -radix hexadecimal sim:/tb_siphash/rst_n
+add wave -position end -radix hexadecimal sim:/tb_siphash/clk
+add wave -position end sim:/tb_siphash/hash_core/state
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/load_k
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/k
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/total_bytes
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/m
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/block_counter
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/current_count
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/b
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/this_m
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/last_m
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/init_ready
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/hash_ready
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/hash
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/v0
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/v1
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/v2
+add wave -position end -radix hexadecimal sim:/tb_siphash/hash_core/v3
