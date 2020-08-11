@@ -83,7 +83,7 @@ signal s_rrcam_wea    : std_logic;
 signal request_record_wp          : integer;
 signal request_record_rp          : integer := 0;
 
-type internal_processing is (waiting, accepting, analysing, discarding, receiving_from_noc_to_peripheral, responding, working, terminating);
+type internal_processing is (waiting, accepting, analysing, discarding, receiving_from_noc_to_peripheral, responding);
 signal internal_processing_state  : internal_processing;
 
 signal s_rrcam_has_data           : std_logic;
@@ -129,38 +129,48 @@ signal request_sent               : std_logic;
 signal request                    : ni_service_request;
 signal response_counter           : integer;
 
-signal m_hash                     : std_logic_vector (BLOCK_WIDTH-1 downto 0);
+signal m_hash                     : std_logic_vector (BLOCK_WIDTH-1 downto 0) := (others => '0');
 signal m_valid_hash               : std_logic;
-signal b_hash                     : std_logic_vector (BYTES_WIDTH-1 downto 0);
+signal b_hash                     : std_logic_vector (BYTES_WIDTH-1 downto 0) := (others => '0');
 signal init_hash                  : std_logic;
-signal load_hash_k                : std_logic;
+signal finalize_hash              : std_logic;
+signal load_hash_k                : std_logic := '0';
 signal init_hash_ready            : std_logic;
 signal hash_ready                 : std_logic;
 signal hash                       : std_logic_vector(HASH_WIDTH-1 downto 0);
 signal siphash_reset              : std_logic;
+signal siphash_clock              : std_logic;
 
 begin
+
+   siphash_reset <= not reset when internal_processing_state = analysing else '0';
+   siphash_clock <= clock when internal_processing_state = analysing else '0';
 
    siphash_control: process(reset, clock)
    begin
       if rising_edge(clock) then
-         if internal_processing_state = analysing and analysing_counter = 0 then
+         if internal_processing_state = analysing and analysing_counter = 1 then
             load_hash_k <= '1';
-            m_hash <= x"0706050403020100";
-         elsif internal_processing_state = analysing and analysing_counter = 1 then
-            m_hash <= x"0F0E0D0C0B0A0908";
-            load_hash_k <= '1';
+            m_hash <= x"5678";
          elsif internal_processing_state = analysing and analysing_counter = 2 then
+            m_hash <= x"1234";
+            load_hash_k <= '1';
+         elsif internal_processing_state = analysing and analysing_counter = 3 then
             init_hash <= '1';
             load_hash_k <= '0';
-            b_hash <= x"8";
-            m_hash <= x"0706050403020100";
-            m_valid_hash <= '1';-- RX
-         elsif internal_processing_state = analysing and analysing_counter = 3 then
+            b_hash <= "10";
+            m_hash <= processing_source_pe;
+            m_valid_hash <= '1';
+         elsif internal_processing_state = analysing and analysing_counter = 4 then
             init_hash <= '0';
+            m_hash <= processing_task_id;
+         elsif internal_processing_state = analysing and analysing_counter = 5 then
+            m_hash <= processing_size;
+         elsif internal_processing_state = analysing and analysing_counter = 6 then
             m_hash <= (others => '0');
-            b_hash <= x"0";
+            b_hash <= (others => '0');
          else
+            init_hash <= '0';
             m_valid_hash <= '0';
          end if;
       end if;
@@ -252,20 +262,26 @@ begin
                   elsif analysing_counter = 2 and rx = '1' then
                      processing_size <= data_in;
                      s_credit_out_processing <= '0';
-                  elsif analysing_counter = 3 then
+                  elsif analysing_counter >= 3 then
                      -- take a decision if this is an authorized request
-                     s_credit_out_processing <= '1';
-                     analysing_done <= '1';
-                     if processing_task_id = request.task_id then
-                        request_approved <= '1';
-                        request.size <= processing_size;
-                     else
-                        waiting_write_request <= '1';
-                        request_approved <= '0';
+                     if hash_ready = '1' then
+                        analysing_done <= '1';
+                        if processing_task_id = request.task_id then
+                           request_approved <= '1';
+                           request.size <= processing_size;
+                           s_credit_out_processing <= '1';
+                        else
+                           waiting_write_request <= '1';
+                           request_approved <= '0';
+                        end if;
                      end if;
                   end if;
 
-                  if rx = '1' then
+                  if analysing_counter < 3 then
+                     if rx = '1' then
+                        analysing_counter <= analysing_counter + 1;
+                     end if;
+                  else
                      analysing_counter <= analysing_counter + 1;
                   end if;
 
@@ -313,8 +329,6 @@ begin
                      respond_read <= '0';
                   end if;
 
-               when working =>
-               when terminating =>
          end case;
       end if;
    end process internal_processing_FSM;
@@ -586,14 +600,12 @@ begin
                    std_logic_vector(to_unsigned(response_counter - read_response_header_size, 8)) when send_read_per = '1' and credit_in = '1' else
                    read_address;
 
-   siphash_reset <= not reset;
-
    siphash : entity work.siphash
    port map(
       m => m_hash,
       b => b_hash,
       rst_n => siphash_reset,
-      clk => clock,
+      clk => siphash_clock,
       init => init_hash,
       load_k => load_hash_k,
       init_ready => init_hash_ready,

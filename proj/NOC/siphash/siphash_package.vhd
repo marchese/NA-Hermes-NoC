@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 
 package siphash_package is
 
-  constant BYTES_WIDTH : integer := 4;
+  constant BYTES_WIDTH : integer := 2;
   constant BLOCK_WIDTH : integer := 2**(BYTES_WIDTH-1)*8;
 
   constant V_WIDTH     : integer := BLOCK_WIDTH;
@@ -13,12 +13,12 @@ package siphash_package is
 
   constant LENGTH_WIDTH : integer := COUNT_WIDTH + BYTES_WIDTH - 1;
 
-  constant V0_INIT : std_logic_vector := x"736f6d6570736575";
-  constant V1_INIT : std_logic_vector := x"646f72616e646f6d";
-  constant V2_INIT : std_logic_vector := x"6c7967656e657261";
-  constant V3_INIT : std_logic_vector := x"7465646279746573";
+  constant V0_INIT : std_logic_vector := x"736f"; -- 736f6d6570736575
+  constant V1_INIT : std_logic_vector := x"646f"; -- 646f72616e646f6d
+  constant V2_INIT : std_logic_vector := x"6c79"; -- 6c7967656e657261
+  constant V3_INIT : std_logic_vector := x"7465"; -- 7465646279746573
 
-  constant V2_FINAL : std_logic_vector := x"00000000000000ff";
+  constant V2_FINAL : std_logic_vector := x"00ff"; -- 00000000000000ff
 
   type v_array is array (integer range <>) of std_logic_vector(V_WIDTH-1 downto 0);
 

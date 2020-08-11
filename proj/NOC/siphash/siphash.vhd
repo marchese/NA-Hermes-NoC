@@ -34,7 +34,7 @@ architecture rtl of siphash is
   signal block_counter : unsigned(COUNT_WIDTH-1 downto 0);
   signal current_count : unsigned(COUNT_WIDTH-1 downto 0);
 
-  signal this_m, last_m : std_logic_vector(BLOCK_WIDTH-1 downto 0);
+  signal this_m, last_m : std_logic_vector(BLOCK_WIDTH-1 downto 0) := (others => '0');
 begin
 
   siprounds : for i in 0 to c-1 generate
